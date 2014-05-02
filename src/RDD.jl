@@ -1,5 +1,5 @@
 type PID
-  node::Int64
+  node::Worker
   ID::Int64
 end
 
