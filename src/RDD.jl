@@ -1,3 +1,12 @@
+type Worker
+    port::Int64
+    active::Bool # can be turned off by an RPC
+
+    coworkers::Array{}
+    masterhostname::ASCIIString
+    masterport::Int64
+end
+
 type PID
   node::Worker
   ID::Int64

@@ -1,7 +1,7 @@
 require("ArgParse")
+require("Spark")
 using ArgParse
-
-include("src/Worker.jl") # make this the module, eventually
+using Spark
 
 function parse_cli()
   s = ArgParseSettings("start_worker.jl")

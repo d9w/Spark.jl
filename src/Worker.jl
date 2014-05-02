@@ -1,16 +1,5 @@
 using JSON
 
-type Worker
-    port::Int64
-    active::Bool # can be turned off by an RPC
-
-    coworkers::Array{}
-    masterhostname::ASCIIString
-    masterport::Int64
-end
-
-include("RDD.jl") # RDD requires Worker type
-
 function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
     Worker(port, true, {}, masterhostname, masterport)
 end
