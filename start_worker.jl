@@ -11,6 +11,14 @@ function parse_cli()
       help = "Listening port on worker for RPC calls"
       arg_type = Int64
       default = 6666
+    "masterhostname"
+      help = "Hostname of master to contact for RDD queries"
+      arg_type = ASCIIString
+      default = "localhost"
+    "masterport"
+      help = "Port of master to contact for RDD queries"
+      arg_type = Int64
+      default = 6668
   end
 
   return parse_args(s)
@@ -19,7 +27,9 @@ end
 function main()
   args = parse_cli()
   port = args["port"]
-  worker = Worker(port)
+  masterhostname = args["masterhostname"]
+  masterport = args["masterport"]
+  worker = Worker(port, masterhostname, masterport)
   start(worker)
   println("done")
 end

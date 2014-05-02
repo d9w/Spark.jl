@@ -28,17 +28,17 @@ function load(configfile)
         catch e
             println("Couldn't connect to $hostname:$port...")
             # Saved failed connections in inactiveworkers for later retrial
-            inactiveworkers = cat(1, inactiveworkers, [client])
+            inactiveworkers = cat(1, inactiveworkers, [(hostname, port)])
         end
     end
-    shareworkers(activeworkers)
+    shareworkers(config)
 end
 
 # Set up the local RPC server for worker->master RDD requests
 function initserver(port)
     server = listen(IPv4(0), port)
     println("Starting server")
-    while true
+    @async while true
         sock = accept(server)
         while true
             try
@@ -58,8 +58,6 @@ end
 function rddhandle(args::Dict)
     global rdds
     rddID = int(args["id"])
-    # TODO maybe change this if it works differently
-    # Can RDDs actually be serialized this way? I don't think so...
     return {"rdd" => rdds[rddID]}
 end
 

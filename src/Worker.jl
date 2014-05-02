@@ -3,11 +3,16 @@ using JSON
 type Worker
     port::Int64
     active::Bool # can be turned off by an RPC
+
     coworkers::Array{}
+    masterhostname::ASCIIString
+    masterport::Int64
 end
 
-function Worker(port::Int64)
-    Worker(port,true,{})
+include("RDD.jl") # RDD requires Worker type
+
+function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
+    Worker(port, true, {}, masterhostname, masterport)
 end
 
 function start(worker::Worker)
@@ -38,17 +43,36 @@ function handle(worker::Worker, line::ASCIIString)
     end
 end
 
-# Get RDD info from the master
-function getRDD(id)
-    # TODO - fill this in with real hostname/port
-    master = connect(hostname, port)
+####
+# Worker->Master: Get RDD info from the master
+####
+function getRDD(worker::Worker, ID::Int64)
+    master = connect(worker.masterhostname, worker.masterport)
     println(master, json({"id" => id}))
     result = readline(master)
-    # TODO - will the RDD actually be JSON-encoded?  probably not
     return JSON.parse(result)["rdd"]
 end
 
-# RPC functions here - called by the master, other workers
+####
+# Worker->Worker RPC: coworker functions for sharing data
+####
+
+function send_coworker(coworker::Array, rdd::RDD) # TODO etc.
+    coworker = connect(coworker[0], coworker[1])
+    args = {"rdd" => rdd}
+    println(coworker, json({:call => "recv_send_coworker", :args => args}))
+end
+
+function recv_send_coworker(worker::Worker, args::Dict)
+    # Do something with the received RDD TODO
+    rdd = args["rdd"]
+end
+
+# TODO etc. (get, get_keys)
+
+####
+# Master->Worker RPC functions here - called by the master, other workers
+####
 function kill(worker::Worker, args::Dict)
     worker.active = false
 end
