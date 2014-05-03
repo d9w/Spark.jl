@@ -1,7 +1,7 @@
 using JSON
 
-function Worker(port::Int64)
-    Worker(port, true, {}, IPv4(0), 0)
+function Worker(hostname::ASCIIString, port::Int64)
+    Worker(hostname, port, true, {}, "", 0, {})
 end
 
 #function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
@@ -34,47 +34,4 @@ function handle(worker::Worker, line::ASCIIString)
     if "call" in keys(msg)
         eval(Expr(:call, symbol(msg["call"]), worker, msg["args"]))
     end
-end
-
-####
-# Worker->Master: Get RDD info from the master
-####
-function getRDD(worker::Worker, ID::Int64)
-    master = connect(worker.masterhostname, worker.masterport)
-    println(master, json({"id" => id}))
-    result = readline(master)
-    return JSON.parse(result)["rdd"]
-end
-
-####
-# Worker->Worker RPC: coworker functions for sharing data
-####
-
-function send_coworker(coworker::Array, rdd::RDD) # TODO etc.
-    coworker = connect(coworker[0], coworker[1])
-    args = {"rdd" => rdd}
-    println(coworker, json({:call => "recv_send_coworker", :args => args}))
-end
-
-function recv_send_coworker(worker::Worker, args::Dict)
-    # Do something with the received RDD TODO
-    rdd = args["rdd"]
-end
-
-# TODO etc. (get, get_keys)
-
-####
-# Master->Worker RPC functions here - called by the master, other workers
-####
-function kill(worker::Worker, args::Dict)
-    worker.active = false
-end
-
-function wprint(worker::Worker, args::Dict)
-    println(args["str"])
-end
-
-# Receive a list of coworkers from the master
-function shareworkers(worker::Worker, args::Dict)
-    worker.coworkers = args["workers"]
 end

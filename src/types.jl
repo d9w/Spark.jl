@@ -1,11 +1,12 @@
 type Worker
+    hostname::ASCIIString
     port::Int64
     active::Bool # can be turned off by an RPC
 
     coworkers::Array{}
-    masterhostname::Base.IPv4
+    masterhostname::ASCIIString
     masterport::Int64
-    
+
     #=rdds::Dict{Int64, RDD}=#
     data::Dict{Int64, Dict{Int64, Array{}}}
 end
@@ -16,9 +17,18 @@ type PID
     ID::Int64
 end
 
+type Transformation
+    name::ASCIIString
+    arguments::Dict{String, Any}
+end
+
+type Action
+    name::ASCIIString
+    arguments::Dict{String, Any}
+end
+
 type Record
-    operation::Function
-    argument::Any
+    operation::Transformation
     sources::Dict{Int64,Array{(Int64,PID)}}
 end
 
@@ -31,6 +41,11 @@ type RDD
 end
 
 type Master
+    hostname::ASCIIString
+    port::Int64
+
     rdds::Array{RDD}
-    workers::Array{Worker}
+    workers::Array{Worker} # seems redundant with below
+    activeworkers::Array{Base.TcpSocket}
+    inactiveworkers::Array{(ASCIIString, Int64)}
 end

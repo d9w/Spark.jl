@@ -30,7 +30,7 @@ function main()
   port = args["port"]
   #masterhostname = args["masterhostname"]
   #masterport = args["masterport"]
-  worker = Worker(port)
+  worker = Worker("127.0.0.1",port)
   println(typeof(worker))
   start(worker)
   println("done")
