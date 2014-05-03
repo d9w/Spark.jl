@@ -1,6 +1,19 @@
+abstract Partition
+
+type HashPartition <: Partition
+    partition_number::Int64
+    total_partitions::Int64
+end
+
+type RangePartition <: Partition
+    range_start::Int64
+    range_end::Int64
+end
+
 type PID
     node::(String, Int)
     ID::Int64
+    partition::Partition
 end
 
 type Transformation
