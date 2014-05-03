@@ -1,19 +1,5 @@
-type Worker
-    hostname::ASCIIString
-    port::Int64
-    active::Bool # can be turned off by an RPC
-
-    coworkers::Array{}
-    masterhostname::ASCIIString
-    masterport::Int64
-
-    #=rdds::Dict{Int64, RDD}=#
-    data::Dict{Int64, Dict{Int64, Array{}}}
-end
-
 type PID
-    #TODO solve circular dependency. Possible fix: store (ip, port) tuple
-    node::Worker
+    node::(String, Int)
     ID::Int64
 end
 
@@ -38,6 +24,19 @@ type RDD
     dependencies::Array{Int64}
     history::Array{Record}
     origin_file::String
+end
+
+type Worker
+    hostname::ASCIIString
+    port::Int64
+    active::Bool # can be turned off by an RPC
+
+    coworkers::Array{}
+    masterhostname::ASCIIString
+    masterport::Int64
+
+    rdds::Dict{Int64, RDD}
+    data::Dict{Int64, Dict{Int64, Array{}}}
 end
 
 type Master

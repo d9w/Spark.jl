@@ -108,7 +108,7 @@ function send_rdd(worker::Worker, rdd::RDD)
     worker.rdds[rdd.ID] = rdd
 end
 
-#TODO fix terms. The logic that reads the file was barely changed so it
+#TODO fix tests. The logic that reads the file was barely changed so it
 #should work without many complications.
 #Tests
 function test_reader(line::String)
