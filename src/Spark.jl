@@ -2,7 +2,7 @@ using JSON
 
 module Spark
 
-export Worker
+export Worker, start
 export RDD
 
 include("types.jl")

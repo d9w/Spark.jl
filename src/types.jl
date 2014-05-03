@@ -1,16 +1,10 @@
 type Worker
     port::Int64
     active::Bool # can be turned off by an RPC
-    IP::Base.IPv4
 
     coworkers::Array{}
-    masterhostname::ASCIIString
+    masterhostname::Base.IPv4
     masterport::Int64
-end
-
-type Master
-    rdds::Array{RDD}
-    workers::Array{Worker}
 end
 
 type PID
@@ -31,4 +25,7 @@ type RDD
     history::Array{Record}
 end
 
-
+type Master
+    rdds::Array{RDD}
+    workers::Array{Worker}
+end
