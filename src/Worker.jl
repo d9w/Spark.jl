@@ -1,8 +1,12 @@
 using JSON
 
-function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
-    Worker(port, true, {}, masterhostname, masterport)
+function Worker(port::Int64)
+    Worker(port, true, {}, IPv4(0), 0)
 end
+
+#function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
+#    Worker(port, true, {}, masterhostname, masterport)
+#end
 
 function start(worker::Worker)
     server = listen(IPv4(0), worker.port)

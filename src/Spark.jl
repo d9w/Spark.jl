@@ -2,10 +2,10 @@ using JSON
 
 module Spark
 
-export Worker
+export Worker, start
 export RDD
 
-include("RDD.jl")
+include("types.jl")
 include("Worker.jl")
 include("Master.jl")
 include("RPC.jl")
