@@ -2,13 +2,25 @@
 function master_read(file_name::String)
     stream = open(file_name)
     total_lines = countlines(stream)
-    
+
     #Get array of workers
     #calculate range of lines for each worker
-    #for each worker
-    #   send worker_read rpc to all the workers
-    #wait for results
+    range = floor(total_lines / num_workers)
+    # range for last worker is n to total_lines
     #Create rdd
+    ID = length(rdds)+1
+    # create partition map
+    #for each partition
+        #send worker_read rpc to all the workers
+        #rpc(worker, input, {rdd, begin, end, filename}
+        #wait for results
+        #if success, add to partition map
+    #end
+
+    # create RDD
+    RDD(ID, dependencies, history, partition_map)
+
+    # send actual rdd to each worker
 
 end
 

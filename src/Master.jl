@@ -1,9 +1,5 @@
 # Master REPL functions
 
-activeworkers = []
-inactiveworkers = []
-rdds = {}
-
 # Load a list of workers from a file, contact them
 function load(configfile)
     global activeworkers
