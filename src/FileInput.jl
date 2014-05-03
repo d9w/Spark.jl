@@ -12,8 +12,8 @@ function master_read(file_name::String)
 
 end
 
-#=reads file between lines begin_line and end_line, inclusive. The first line is indexed 1 instead=#
-#=of 0 to match julia's behaviour for arrays, etc. =#
+#reads file between lines begin_line and end_line, inclusive. The first line 
+#is indexed 1 instead of 0 to match julia's behaviour for arrays, etc. 
 function worker_read(file_name::String, begin_line::Int, end_line::Int, reader::Function, rdd_type::Type)
     stream = open(file_name)
     seek_line(stream, begin_line)
