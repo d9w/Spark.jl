@@ -27,6 +27,7 @@ type RDD
 end
 
 type Worker
+    ID::Int
     hostname::ASCIIString
     port::Int64
     active::Bool # can be turned off by an RPC

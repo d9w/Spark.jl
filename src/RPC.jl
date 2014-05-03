@@ -34,11 +34,14 @@ end
 
 # call: tell the workers the master hostname and port
 function identify(master::Master)
-    allrpc(master, "identify", {:hostname => master.hostname, :port => master.port})
+    for w = 1:length(master.workers)
+        rpc(w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
+    end
 end
 
 # handler: set the master hostname and port on the worker
 function identify(worker::Worker, args::Dict)
+    worker.id = args["ID"]
     worker.masterhostname=args["hostname"]
     worker.masterport=args["port"]
 end
@@ -104,7 +107,6 @@ end
 function ping(worker::Worker)
     master = connect(worker.masterhostname, worker.masterport)
     println(master, json({:call => "ping", :args => {:id => worker.ID}}))
-    #TODO: tell each worker their position in master.workers
 end
 
 # handler: set the worker active flag
