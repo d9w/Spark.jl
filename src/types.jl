@@ -1,13 +1,13 @@
 abstract Partition
 
 type HashPartition <: Partition
-    partition_number::Int64
-    total_partitions::Int64
+    partition_number::Int
+    total_partitions::Int
 end
 
-type RangePartition <: Partition
-    range_start::Int64
-    range_end::Int64
+type RangePartition{T} <: Partition
+    range_start::T
+    range_end::T
 end
 
 type PID
