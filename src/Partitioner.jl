@@ -30,7 +30,7 @@ function range_partitioner(master::Master, rdd::RDD)
     return partitions
 end
 
-function hash_partitioner(master::Master, rdd:RDD)
+function hash_partitioner(master::Master, rdd::RDD)
 
     partitioned_keys = Dict{Int64,Any}()
     #TODO get keys, ie. rdd_values

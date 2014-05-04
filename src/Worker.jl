@@ -1,8 +1,5 @@
 using JSON
-
-function Worker(hostname::ASCIIString, port::Int64)
-    Worker(hostname, port, true, {}, "", 0, {})
-end
+using Spark
 
 #function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
 #    Worker(port, true, {}, masterhostname, masterport)
