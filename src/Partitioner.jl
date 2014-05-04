@@ -1,5 +1,8 @@
 using Spark
 
+# TODO i thought that the partitioner would be given the num partitions, 
+# so the function callling it would already know the number of active workers and stuff
+# This way the code would be less redundant, no?
 function range_partitioner(master::Master, rdd::RDD)
     partitions::Partition = Array(Partition, 0)
     rdd_values = Array()
@@ -26,4 +29,18 @@ function range_partitioner(master::Master, rdd::RDD)
     append!(partitions, start_range, end_range)
 
     return partitions
+end
+
+function hash_partitioner(master::Master, rdd:RDD)
+
+    partitioned_keys = Dict{Int64,Any}()
+    #TODO get keys, ie. rdd_values
+    for key in keys
+        pid = hash(key) % total_partitions
+        if has(partitioned_keys, pid)
+            push(ref(partitioned_keys, pid), key)
+        else
+            partitioned_keys[pid] = [key]
+        end
+    return partitioned_keys
 end
