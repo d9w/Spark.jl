@@ -51,6 +51,10 @@ type Worker
 
     rdds::Dict{Int64, RDD}
     data::Dict{Int64, Dict{Int64, Array{}}}
+
+    function Worker(hostname::ASCIIString, port::Int64)
+        new(hostname, port, true, {}, "", 0, {})
+    end
 end
 
 type Master
@@ -61,4 +65,8 @@ type Master
     workers::Array{Worker} # seems redundant with below
     activeworkers::Array{Base.TcpSocket}
     inactiveworkers::Array{(ASCIIString, Int64)}
+
+    function Master(hostname::ASCIIString, port::Int64)
+        new(hostname, port, {}, {}, {}, {})
+    end
 end

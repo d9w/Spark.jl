@@ -1,8 +1,5 @@
 # Master REPL functions
-
-function Master(hostname::ASCIIString, port::Int64)
-    Master(hostname, port, {}, {}, {}, {})
-end
+using Spark
 
 # Load a list of workers from a file, contact them
 function load(master::Master, configfile)
