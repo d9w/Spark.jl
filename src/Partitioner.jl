@@ -4,7 +4,6 @@ using Spark
 # so the function callling it would already know the number of active workers and stuff
 # This way the code would be less redundant, no?
 function range_partitioner(master::Master, rdd::RDD)
-    partitions::Partition = Array(Partition, 0)
     rdd_values = Array()
     #TODO collect rdd values
     sort!(rdd_values)
@@ -42,5 +41,6 @@ function hash_partitioner(master::Master, rdd:RDD)
         else
             partitioned_keys[pid] = [key]
         end
+    end
     return partitioned_keys
 end
