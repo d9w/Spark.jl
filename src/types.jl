@@ -63,7 +63,7 @@ type Master
 
     rdds::Array{RDD}
     workers::Array{Worker} # seems redundant with below
-    activeworkers::Array{Base.TcpSocket}
+    activeworkers::Array{(ASCIIString, Int64, Base.TcpSocket)}
     inactiveworkers::Array{(ASCIIString, Int64)}
 
     function Master(hostname::ASCIIString, port::Int64)

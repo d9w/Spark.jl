@@ -6,15 +6,30 @@
 # to a particular worker (reference in activeworkers), broadcastmsg to send
 # to all of them.
 function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
+    success = true
     for w in master.activeworkers
-        rpc(w, func, args)
+        if !rpc(master, w, func, args)
+            success = false
+        end
     end
+    return success
 end
 
-function rpc(worker::Base.TcpSocket, func::ASCIIString, args::Dict)
+function rpc(master::Master, worker::(ASCIIString, Int64, Base.TcpSocket), func::ASCIIString, args::Dict)
+    socket = worker[3]
     m = {:call => func, :args => args}
     encoded = json(m)
-    println(worker, encoded)
+    try
+        println(socket, encoded)
+        result = JSON.parse(readline(socket))
+        return result["result"]
+    catch e
+        # this worker should now be considered offline
+        # Move this worker to inactiveworkers (RPC failed)
+        filter!(n -> n != worker, master.activeworkers)
+        master.inactiveworkers = cat(1, master.inactiveworkers, [(worker[1], worker[2])])
+        return false
+    end
 end
 
 ##############################
@@ -35,7 +50,7 @@ end
 # call: tell the workers the master hostname and port
 function identify(master::Master)
     for w = 1:length(master.workers)
-        rpc(w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
+        rpc(master, w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
     end
 end
 
@@ -44,6 +59,7 @@ function identify(worker::Worker, args::Dict)
     worker.id = args["ID"]
     worker.masterhostname=args["hostname"]
     worker.masterport=args["port"]
+    return true
 end
 
 # call: Demo RPC
@@ -54,6 +70,7 @@ end
 # handler: Demo RPC
 function wprint(worker::Worker, args::Dict)
     println(args["str"])
+    return true
 end
 
 # call: share all workers with activeworkers so they can connect to each other
@@ -64,6 +81,7 @@ end
 # handler: receive a list of coworkers from the master
 function shareworkers(worker::Worker, args::Dict)
     worker.coworkers = args["workers"]
+    return true
 end
 
 # call: do a transformation (do is a keyword, using "apply")
@@ -104,6 +122,7 @@ function apply(worker::Worker, args::Dict)
     # send to an evaluator for each operation, based on name, like:
     # oper = args["oper"]
     # eval(Expr(:call, symbol(oper.name), args["RDD"], oper.args))
+    return true
 end
 
 ##############################

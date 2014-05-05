@@ -15,9 +15,10 @@ function load(master::Master, configfile)
         try
             # Try to connect to all the clients
             client = connect(hostname, port)
-            master.activeworkers = cat(1, master.activeworkers, [client])
+            master.activeworkers = cat(1, master.activeworkers, [(hostname, port, client)])
         catch e
             println("Couldn't connect to $hostname:$port...")
+            showerror(STDERR, e)
             # Saved failed connections in inactiveworkers for later retrial
             master.inactiveworkers = cat(1, master.inactiveworkers, [(hostname, port)])
         end
@@ -52,7 +53,9 @@ function handle(master::Master, line::ASCIIString)
     # this is dispatched to any function call - fine since we're assuming
     # a private non-adversarial network.
     msg = JSON.parse(strip(line))
+    r = false
     if "call" in keys(msg)
-        eval(Expr(:call, symbol(msg["call"]), master, msg["args"]))
+        r = eval(Expr(:call, symbol(msg["call"]), master, msg["args"]))
     end
+    return r
 end

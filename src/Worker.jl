@@ -13,7 +13,8 @@ function start(worker::Worker)
         while worker.active
             try
                 line = readline(sock)
-                handle(worker, line)
+                result = handle(worker, line)
+                println(sock, json({"result" => result}))
             catch e
                 showerror(STDERR, e)
                 break
@@ -28,9 +29,11 @@ function handle(worker::Worker, line::ASCIIString)
     # this is dispatched to any function call - fine since we're assuming
     # a private non-adversarial network.
     msg = JSON.parse(strip(line))
+    r = false
     if "call" in keys(msg)
-        eval(Expr(:call, symbol(msg["call"]), worker, msg["args"]))
+        r = eval(Expr(:call, symbol(msg["call"]), worker, msg["args"]))
     end
+    return r
 end
 
 function create_partition(worker::Worker, rdd_id::Int64, partition_id::Int64, partition::Partition, 
