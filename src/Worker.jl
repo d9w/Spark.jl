@@ -34,12 +34,12 @@ function handle(worker::Worker, line::ASCIIString)
 end
 
 function create_partition(worker::Worker, rdd_id::Int64, partition_id::Int64, partition::Partition, 
-    source_rdds::Array{Array{PID}}, op_type::String, op_args::Dict{})
-    rdds::Array{Array{}} = Array(Array, 0)
-    for rdd in source_rdds
-        rdd_data:Array{}
+    dependencies::Array{Array{PID}}, oper::Transformation)
+    rdds::Array{Array{Any}} = Array(Array{Any}, 0)
+    for rdd in dependencies
+        rdd_data:Array{Any}
         for partition in rdd
-            partition_data::Array
+            partition_data::Array{Any}
             
             #attempt to get partition data. If partition cannot be found
             #tell the master to rebuild it.
@@ -53,8 +53,9 @@ function create_partition(worker::Worker, rdd_id::Int64, partition_id::Int64, pa
             end
             rdd_data = vcat(rdd_data, partition_data)
         end
+        append!(rdds, rdd_data)
     end
     
     #handle_op executes operation dependant code and adds the new partition to worker.data
-    handle_op(worker, rdd_id, partition_id, partition, op_type, op_args, rdd_data)
+    handle_op(worker, rdd_id, partition_id, partition, oper, rdd_data)
 end
