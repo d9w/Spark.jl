@@ -8,25 +8,26 @@
 function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
     success = true
     for w in master.activeworkers
-        if !rpc(w[3], func, args)
+        if !rpc(master, w, func, args)
             success = false
-            # Move this worker to inactiveworkers (RPC failed)
-            filter!(n -> n != w, master.activeworkers)
-            master.inactiveworkers = cat(1, master.inactiveworkers, [(w[1], w[2])])
         end
     end
     return success
 end
 
-function rpc(worker::Base.TcpSocket, func::ASCIIString, args::Dict)
+function rpc(master::Master, worker::(ASCIIString, Int64, Base.TcpSocket), func::ASCIIString, args::Dict)
+    socket = worker[3]
     m = {:call => func, :args => args}
     encoded = json(m)
     try
-        println(worker, encoded)
-        result = JSON.parse(readline(worker))
+        println(socket, encoded)
+        result = JSON.parse(readline(socket))
         return result["result"]
     catch e
         # this worker should now be considered offline
+        # Move this worker to inactiveworkers (RPC failed)
+        filter!(n -> n != worker, master.activeworkers)
+        master.inactiveworkers = cat(1, master.inactiveworkers, [(worker[1], worker[2])])
         return false
     end
 end
@@ -49,7 +50,7 @@ end
 # call: tell the workers the master hostname and port
 function identify(master::Master)
     for w = 1:length(master.workers)
-        rpc(w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
+        rpc(master, w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
     end
 end
 
