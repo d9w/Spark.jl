@@ -67,10 +67,30 @@ function shareworkers(worker::Worker, args::Dict)
 end
 
 # call: do a transformation (do is a keyword, using "apply")
-function apply(master::Master, RDD_ID::Int64, oper::Transformation)
+#operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
+function apply(master::Master, oper::Transformation)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
     # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})
+    
+    new_ID::Int64 = length(master.rdds) + 1
+
+    #transformation dependant steps
+
+    new_partitions::Array{PID} = calculate_partitions(master, oper)
+    new_dependencies::Array{Array{PID}} = calculate_dependencies(master, oper)
+
+    @parallel for i = 1:length(new_partitions)
+        processed_partition = false
+        while !processed_partition
+            #select an active worker (preferably unique for each partition)
+            #args = {:rdd_id => new_ID, :partition_id => new_partitions[i].ID, :partition = new_partitions[i].partition, :dependencies => new_dependencies, :oper => oper}
+            #rpc(worker, "create_partition", args) 
+            #if successful processed_partition = true
+        end
+    end
+
+    #send rdd to all workers that got a partition in the last step
 end
 
 # call: do an action
