@@ -195,3 +195,33 @@ function get_keys(worker::Worker, args::Dict)
     data_keys = keys(data)
     return {"reply" => data_keys}
 end
+
+# Get the data for a specific key
+function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
+    if !(rdd_int in keys(worker.rdds))
+        worker.rdds[rdd_int] = getRDD(worker, rdd_int)
+    end
+    
+    partition_id = assign(worker.rdds[rdd_int].rdd.partitioner, worker.rdds[rdd_int].rdd, key)
+
+    origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
+    origin_socket = connect(origin_worker.hostname, origin_worker.port)
+
+    args = {:rdd_id => rdd_id, :partition_id => partition_id, :key => key}
+    println(origin_socket, json(:call => "get_key_data", :args => args))
+    try 
+        reply = JSON.parse(readline(master))["reply"]
+        return (true, reply)
+    catch e
+        return (false, Array(Any, 0))
+    end
+end
+
+# Returns key data for a particular (rdd, partition, key)
+function get_key_data(worker::Worker, args::Dict)
+    rdd_id::Int64 = args["rdd_id"]
+    partition_id::Int64 = args["partition_id"]
+    key::Any = args["key"]
+    data = worker.rdds[rdd_id].partitions[partition_id].data[key]
+    return {"reply" => data}
+end
