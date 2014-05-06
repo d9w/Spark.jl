@@ -1,10 +1,5 @@
 using Spark
 
-abstract Partitioner
-
-type HashPartitioner <: Partitioner
-end
-
 function create(p::HashPartitioner, master::Master)
     partitions = {}
     part_i = 0

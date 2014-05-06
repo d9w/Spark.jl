@@ -139,7 +139,8 @@ end
 
 # handler: return RDD info from master to worker
 function getRDD(master::Master, args::Dict)
-    return {"rdd" => master.rdds[args["id"]]}
+    # Convert to WorkerRDD, include master RDD copy in WorkerRDD.rdd
+    return json({:rdd => WorkerRDD(Dict{Int64, WorkerPartition}(), master.rdds[args["id"]])})
 end
 
 # call: ping the master for activeness (any information to piggyback?)
@@ -168,16 +169,16 @@ function recv_send_coworker(worker::Worker, args::Dict)
     rdd = args["rdd"]
 end
 
-# TODO etc. (get, get_keys)
-
-#Returns tuple (boolean, data) where the first element should tell whether the operation was
-#successful. data contains all the key in the remote partition that belong in the partition
-#specified by the partitioner object
-function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64, partitioner::Partitioner)
-    rdd = getRDD(worker, rdd_int)
-    args = {"rdd_int" => rdd_int, "partition_id" => partition_id, "partitioner" => partitioner}
-    #let origin_worker be the worker where the partition is hosted
-    println(origin_worker, json(:call => "get_keys", :args => args))
+# Returns tuple (boolean, data) where the first element should tell whether the operation was
+# successful. data contains all the key in the remote partition that belong in the partition
+function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64)
+    args = {"rdd_int" => rdd_int, "partition_id" => partition_id}
+    if !(rdd_int in keys(worker.rdds))
+        worker.rdds[rdd_int] = getRDD(worker, rdd_int)
+    end
+    origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
+    origin_socket = connect(origin_worker.hostname, origin_worker.port)
+    println(origin_socket, json(:call => "get_keys", :args => args))
     try 
         reply = JSON.parse(readline(master))["reply"]
         return (true, reply)
@@ -186,19 +187,41 @@ function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64, partition
     end
 end
 
-#returns keys in partition that belong to the provided partition object 
+# Returns keys in partition that belong to the provided partition object 
 function get_keys(worker::Worker, args::Dict)
     rdd_id::Int64 = args["rdd_id"]
     partition_id::Int64 = args["partition_id"]
-    partitioner::Partitioner = args["partitioner"]
-    data = worker.rdds[rdd_id].partitions[partition_id]
-    send_data::Dict{Any, Array{Any}} = Dict{Any, Array{Any}}()
+    data = worker.rdds[rdd_id].partitions[partition_id].data
+    data_keys = keys(data)
+    return {"reply" => data_keys}
+end
 
-    for key in keys(data)
-        if hash(key) % partitioner.total_partitions == partitioner.partition_number
-            send_data[key] = data[key]
-        end
+# Get the data for a specific key
+function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
+    if !(rdd_int in keys(worker.rdds))
+        worker.rdds[rdd_int] = getRDD(worker, rdd_int)
     end
+    
+    partition_id = assign(worker.rdds[rdd_int].rdd.partitioner, worker.rdds[rdd_int].rdd, key)
 
-    return {"reply" => send_data}
+    origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
+    origin_socket = connect(origin_worker.hostname, origin_worker.port)
+
+    args = {:rdd_id => rdd_id, :partition_id => partition_id, :key => key}
+    println(origin_socket, json(:call => "get_key_data", :args => args))
+    try 
+        reply = JSON.parse(readline(master))["reply"]
+        return (true, reply)
+    catch e
+        return (false, Array(Any, 0))
+    end
+end
+
+# Returns key data for a particular (rdd, partition, key)
+function get_key_data(worker::Worker, args::Dict)
+    rdd_id::Int64 = args["rdd_id"]
+    partition_id::Int64 = args["partition_id"]
+    key::Any = args["key"]
+    data = worker.rdds[rdd_id].partitions[partition_id].data[key]
+    return {"reply" => data}
 end
