@@ -2,7 +2,9 @@
 #keys for which hash(key) = partition mod total_partitions
 #is true are in this partition. The rdd should probably store the
 #partitioning to be able to recover specific partitions.
-type Partitioner
+abstract Partitioner
+
+type HashPartitioner <: Partitioner
     partition_number::Int
     total_partitions::Int
 end
@@ -35,6 +37,7 @@ type RDD
     partitions::Array{PID}
     dependencies::Dict{Int64, Array{PID}}
     operation::Transformation
+    partitioner::Partitioner
     # origin_file::String - not all RDDs have one origin, like the result of a join
     #                       we can just keep this information in a creation transformation
 end
