@@ -89,18 +89,6 @@ function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
 
     new_RDD = RDD(ID, partitions, dependencies, oper, partitioner)
     allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
-
-#    @parallel for i = 1:length(new_partitions)
-#        processed_partition = false
-#        while !processed_partition
-#            #select an active worker (preferably unique for each partition)
-#            #args = {:rdd_id => new_ID, :partition_id => new_partitions[i].ID, :partition = new_partitions[i].partition, :dependencies => new_dependencies, :oper => oper}
-#            #rpc(worker, "create_partition", args)
-#            #if successful processed_partition = true
-#        end
-#    end
-#
-    #send rdd to all workers that got a partition in the last step
 end
 
 # call: do an action
@@ -108,12 +96,18 @@ function apply(master::Master, rdd::RDD, oper::Action)
     allrpc(master, "apply", {:rdd => rdd, :oper => oper})
 end
 
-# handler: perform the transformation OR action (operation)
+
+# handler: do an action or transformation on a worker
 function apply(worker::Worker, args::Dict)
-    # send to an evaluator for each operation, based on name, like:
     oper = args["oper"]
-    eval(Expr(:call, symbol(oper.name), worker, args["rdd"], oper.args))
-    return true
+    rdd = args["rdd"]
+    rdd_id = args["rdd"].ID
+    # Create a new worker RDD reference and add the metadata, empty data.
+    if !(rdd_id in keys(worker.rdds))
+        worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
+    end
+    result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], oper.args))
+    return result 
 end
 
 ##############################
