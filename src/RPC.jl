@@ -3,20 +3,20 @@
 ##############################
 
 # General outgoing message broadcasting - use msg to send
-# to a particular worker (reference in activeworkers), broadcastmsg to send
+# to a particular active worker, broadcastmsg to send
 # to all of them.
 function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
     success = true
-    for w in master.activeworkers
-        if !rpc(master, w, func, args)
+    for w in master.workers
+        if w.active && !rpc(master, w, func, args)
             success = false
         end
     end
     return success
 end
 
-function rpc(master::Master, worker::(ASCIIString, Int64, Base.TcpSocket), func::ASCIIString, args::Dict)
-    socket = worker[3]
+function rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::Dict)
+    socket = worker.socket
     m = {:call => func, :args => args}
     encoded = json(m)
     try
@@ -24,10 +24,7 @@ function rpc(master::Master, worker::(ASCIIString, Int64, Base.TcpSocket), func:
         result = JSON.parse(readline(socket))
         return result["result"]
     catch e
-        # this worker should now be considered offline
-        # Move this worker to inactiveworkers (RPC failed)
-        filter!(n -> n != worker, master.activeworkers)
-        master.inactiveworkers = cat(1, master.inactiveworkers, [(worker[1], worker[2])])
+        worker.active = false
         return false
     end
 end
@@ -73,7 +70,7 @@ function wprint(worker::Worker, args::Dict)
     return true
 end
 
-# call: share all workers with activeworkers so they can connect to each other
+# call: share all workers with active workers so they can connect to each other
 function shareworkers(master::Master, workers)
     allrpc(master, "shareworkers", {:workers => workers})
 end

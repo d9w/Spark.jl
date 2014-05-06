@@ -1,5 +1,12 @@
+type WorkerRef # for the master
+    hostname::ASCIIString
+    port::Int64
+    socket::Any
+    active::Bool
+end
+
 type PID
-    node::(String, Int)
+    node::WorkerRef
     ID::Int64
 end
 
@@ -26,6 +33,11 @@ type RDD
     origin_file::String
 end
 
+type WorkerPartition
+    ID::Int64
+    data::Dict{Any, Array{Any}}
+end
+
 type WorkerRDD
     ID::Int64
     partitions::Array{WorkerPartition}
@@ -34,12 +46,7 @@ type WorkerRDD
     origin_file::String
 end
 
-type WorkerPartition
-    ID::Int64
-    data::Dict{Any, Array{Any}}
-end
-
-type Worker
+type Worker # for the worker
     ID::Int
     hostname::ASCIIString
     port::Int64
@@ -61,10 +68,9 @@ type Master
     port::Int64
 
     rdds::Array{RDD}
-    activeworkers::Array{(ASCIIString, Int64, Base.TcpSocket)}
-    inactiveworkers::Array{(ASCIIString, Int64)}
+    workers::Array{WorkerRef}
 
     function Master(hostname::ASCIIString, port::Int64)
-        new(hostname, port, {}, {}, {}, {})
+        new(hostname, port, {}, {})
     end
 end
