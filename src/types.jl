@@ -1,19 +1,6 @@
-abstract Partition
-
-type HashPartition <: Partition
-    partition_number::Int
-    total_partitions::Int
-end
-
-type RangePartition{T} <: Partition
-    range_start::T
-    range_end::T
-end
-
 type PID
     node::(String, Int)
     ID::Int64
-    partition::Partition
 end
 
 type Transformation
@@ -39,6 +26,19 @@ type RDD
     origin_file::String
 end
 
+type WorkerRDD
+    ID::Int64
+    partitions::Array{WorkerPartition}
+    dependencies::Array{Int64}
+    history::Array{Record}
+    origin_file::String
+end
+
+type WorkerPartition
+    ID::Int64
+    data::Dict{Any, Array{Any}}
+end
+
 type Worker
     ID::Int
     hostname::ASCIIString
@@ -49,7 +49,7 @@ type Worker
     masterhostname::ASCIIString
     masterport::Int64
 
-    rdds::Dict{Int64, RDD}
+    rdds::Dict{Int64, WorkerRDD}
     data::Dict{Int64, Dict{Int64, Array{}}}
 
     function Worker(hostname::ASCIIString, port::Int64)
@@ -62,7 +62,6 @@ type Master
     port::Int64
 
     rdds::Array{RDD}
-    workers::Array{Worker} # seems redundant with below
     activeworkers::Array{(ASCIIString, Int64, Base.TcpSocket)}
     inactiveworkers::Array{(ASCIIString, Int64)}
 
