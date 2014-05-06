@@ -3,20 +3,20 @@
 ##############################
 
 # General outgoing message broadcasting - use msg to send
-# to a particular worker (reference in activeworkers), broadcastmsg to send
+# to a particular active worker, broadcastmsg to send
 # to all of them.
 function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
     success = true
-    for w in master.activeworkers
-        if !rpc(master, w, func, args)
+    for w in master.workers
+        if w.active && !rpc(w, func, args)
             success = false
         end
     end
     return success
 end
 
-function rpc(master::Master, worker::(ASCIIString, Int64, Base.TcpSocket), func::ASCIIString, args::Dict)
-    socket = worker[3]
+function rpc(worker::WorkerRef, func::ASCIIString, args::Dict)
+    socket = worker.socket
     m = {:call => func, :args => args}
     encoded = json(m)
     try
@@ -24,10 +24,7 @@ function rpc(master::Master, worker::(ASCIIString, Int64, Base.TcpSocket), func:
         result = JSON.parse(readline(socket))
         return result["result"]
     catch e
-        # this worker should now be considered offline
-        # Move this worker to inactiveworkers (RPC failed)
-        filter!(n -> n != worker, master.activeworkers)
-        master.inactiveworkers = cat(1, master.inactiveworkers, [(worker[1], worker[2])])
+        worker.active = false
         return false
     end
 end
@@ -73,7 +70,7 @@ function wprint(worker::Worker, args::Dict)
     return true
 end
 
-# call: share all workers with activeworkers so they can connect to each other
+# call: share all workers with active workers so they can connect to each other
 function shareworkers(master::Master, workers)
     allrpc(master, "shareworkers", {:workers => workers})
 end
@@ -85,43 +82,46 @@ function shareworkers(worker::Worker, args::Dict)
 end
 
 # call: do a transformation (do is a keyword, using "apply")
-#operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
-function apply(master::Master, oper::Transformation)
+# operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
+function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
     # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})
-    
-    new_ID::Int64 = length(master.rdds) + 1
 
-    #transformation dependant steps
-
-    new_partitions::Array{PID} = calculate_partitions(master, oper)
-    new_dependencies::Array{Array{PID}} = calculate_dependencies(master, oper)
-
-    @parallel for i = 1:length(new_partitions)
-        processed_partition = false
-        while !processed_partition
-            #select an active worker (preferably unique for each partition)
-            #args = {:rdd_id => new_ID, :partition_id => new_partitions[i].ID, :partition = new_partitions[i].partition, :dependencies => new_dependencies, :oper => oper}
-            #rpc(worker, "create_partition", args) 
-            #if successful processed_partition = true
-        end
+    ID::Int64 = length(master.rdds) + 1
+    # assume hash partition with n = number of active workers
+    partitions = create(HashPartitioner(), master)
+    dependencies = Dict{Any, Array{Any}}()
+    for rdd in rdds
+        dependencies[rdd.ID] = rdd.partitions
     end
 
+    new_RDD = RDD(ID, partitions, dependencies, oper)
+    allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
+
+#    @parallel for i = 1:length(new_partitions)
+#        processed_partition = false
+#        while !processed_partition
+#            #select an active worker (preferably unique for each partition)
+#            #args = {:rdd_id => new_ID, :partition_id => new_partitions[i].ID, :partition = new_partitions[i].partition, :dependencies => new_dependencies, :oper => oper}
+#            #rpc(worker, "create_partition", args)
+#            #if successful processed_partition = true
+#        end
+#    end
+#
     #send rdd to all workers that got a partition in the last step
 end
 
 # call: do an action
-function apply(master::Master, RDD_ID::Int64, oper::Action)
-    # no new RDD is necessary, should just be:
-    # allrpc(master, "apply", {:RDD => master.RDDs[RDD_ID], :oper => oper})
+function apply(master::Master, rdd::RDD, oper::Action)
+    allrpc(master, "apply", {:rdd => rdd, :oper => oper})
 end
 
 # handler: perform the transformation OR action (operation)
 function apply(worker::Worker, args::Dict)
     # send to an evaluator for each operation, based on name, like:
-    # oper = args["oper"]
-    # eval(Expr(:call, symbol(oper.name), args["RDD"], oper.args))
+    oper = args["oper"]
+    eval(Expr(:call, symbol(oper.name), args["rdd"], oper.args))
     return true
 end
 

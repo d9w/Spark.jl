@@ -7,9 +7,17 @@ type Partitioner
     total_partitions::Int
 end
 
+type WorkerRef # for the master
+    hostname::ASCIIString
+    port::Int64
+    socket::Any
+    active::Bool
+end
+
 type PID
-    node::(String, Int)
+    node::WorkerRef
     ID::Int64
+    #TODO PID type should probably include a partitioner object
 end
 
 type Transformation
@@ -22,25 +30,13 @@ type Action
     arguments::Dict{String, Any}
 end
 
-type Record
-    operation::Transformation
-    sources::Dict{Int64,Array{(Int64,PID)}}
-end
-
 type RDD
     ID::Int64
     partitions::Array{PID}
-    dependencies::Array{Int64}
-    history::Array{Record}
-    origin_file::String
-end
-
-type WorkerRDD
-    ID::Int64
-    partitions::Array{WorkerPartition}
-    dependencies::Array{Int64}
-    history::Array{Record}
-    origin_file::String
+    dependencies::Dict{Int64, Array{PID}}
+    operation::Transformation
+    # origin_file::String - not all RDDs have one origin, like the result of a join
+    #                       we can just keep this information in a creation transformation
 end
 
 type WorkerPartition
@@ -48,7 +44,12 @@ type WorkerPartition
     data::Dict{Any, Array{Any}}
 end
 
-type Worker
+type WorkerRDD
+    partitions::Dict{Int64, WorkerPartition}
+    rdd::RDD
+end
+
+type Worker # for the worker
     ID::Int
     hostname::ASCIIString
     port::Int64
@@ -70,10 +71,9 @@ type Master
     port::Int64
 
     rdds::Array{RDD}
-    activeworkers::Array{(ASCIIString, Int64, Base.TcpSocket)}
-    inactiveworkers::Array{(ASCIIString, Int64)}
+    workers::Array{WorkerRef}
 
     function Master(hostname::ASCIIString, port::Int64)
-        new(hostname, port, {}, {}, {}, {})
+        new(hostname, port, {}, {})
     end
 end

@@ -4,24 +4,23 @@ using Spark
 
 # Load a list of workers from a file, contact them
 function load(master::Master, configfile)
-    #global activeworkers
     f = open(configfile)
     config = JSON.parse(readall(f))
     for worker in config
         # Read the configuration file and try to connect to all the workers
         hostname = worker[1]
         port = worker[2]
-        #master.workers = cat(1, master.workers, [Worker(hostname, port)])
+        socket = None
+        active = false
         try
             # Try to connect to all the clients
-            client = connect(hostname, port)
-            master.activeworkers = cat(1, master.activeworkers, [(hostname, port, client)])
+            socket = connect(hostname, port)
+            active = true
         catch e
             println("Couldn't connect to $hostname:$port...")
             showerror(STDERR, e)
-            # Saved failed connections in inactiveworkers for later retrial
-            master.inactiveworkers = cat(1, master.inactiveworkers, [(hostname, port)])
         end
+        master.workers = cat(1, master.workers, [WorkerRef(hostname, port, socket, active)])
     end
     Spark.shareworkers(master, config)
 end

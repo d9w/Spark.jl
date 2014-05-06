@@ -1,5 +1,26 @@
 using Spark
 
+abstract Partitioner
+
+type HashPartitioner <: Partitioner
+end
+
+function create(p::HashPartitioner, master::Master)
+    partitions = {}
+    part_i = 0
+    for worker in master.workers
+        if worker.active
+            partitions = cat(1, partitions, PID{worker, part_i})
+            part_i = part_i + 1
+        end
+    end
+    return partitions
+end
+
+function assign(p::HashPartitioner, rdd::RDD, key::Any)
+    return convert(Int64, hash(key) % length(rdd.partitions))
+end
+
 # TODO i thought that the partitioner would be given the num partitions, 
 # so the function callling it would already know the number of active workers and stuff
 # This way the code would be less redundant, no?
