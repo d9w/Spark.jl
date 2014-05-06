@@ -22,7 +22,6 @@ function load(master::Master, configfile)
         end
         master.workers = cat(1, master.workers, [WorkerRef(hostname, port, socket, active)])
     end
-    Spark.shareworkers(master, config)
 end
 
 # Set up the local RPC server for worker->master RDD requests

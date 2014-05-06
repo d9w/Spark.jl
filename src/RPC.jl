@@ -72,17 +72,6 @@ function wprint(worker::Worker, args::Dict)
     return true
 end
 
-# call: share all workers with active workers so they can connect to each other
-function shareworkers(master::Master, workers)
-    allrpc(master, "shareworkers", {:workers => workers})
-end
-
-# handler: receive a list of coworkers from the master
-function shareworkers(worker::Worker, args::Dict)
-    worker.coworkers = args["workers"]
-    return true
-end
-
 # call: do a transformation (do is a keyword, using "apply")
 # operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
 function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
