@@ -96,7 +96,7 @@ function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
         dependencies[rdd.ID] = rdd.partitions
     end
 
-    new_RDD = RDD(ID, partitions, dependencies, oper)
+    new_RDD = RDD(ID, partitions, dependencies, oper, partitioner)
     allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
 
 #    @parallel for i = 1:length(new_partitions)
@@ -121,7 +121,7 @@ end
 function apply(worker::Worker, args::Dict)
     # send to an evaluator for each operation, based on name, like:
     oper = args["oper"]
-    eval(Expr(:call, symbol(oper.name), args["rdd"], oper.args))
+    eval(Expr(:call, symbol(oper.name), worker, args["rdd"], oper.args))
     return true
 end
 
@@ -178,7 +178,7 @@ function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64, partition
     args = {"rdd_int" => rdd_int, "partition_id" => partition_id, "partitioner" => partitioner}
     #let origin_worker be the worker where the partition is hosted
     println(origin_worker, json(:call => "get_keys", :args => args))
-    try 
+    try
         reply = JSON.parse(readline(master))["reply"]
         return (true, reply)
     catch e

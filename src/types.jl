@@ -1,7 +1,3 @@
-#This object describes a deterministic partitioning
-#keys for which hash(key) = partition mod total_partitions
-#is true are in this partition. The rdd should probably store the
-#partitioning to be able to recover specific partitions.
 abstract Partitioner
 
 type HashPartitioner <: Partitioner
