@@ -15,7 +15,6 @@ end
 type PID
     node::WorkerRef
     ID::Int64
-    #TODO PID type should probably include a partitioner object
 end
 
 type Transformation
@@ -34,12 +33,9 @@ type RDD
     dependencies::Dict{Int64, Array{PID}}
     operation::Transformation
     partitioner::Partitioner
-    # origin_file::String - not all RDDs have one origin, like the result of a join
-    #                       we can just keep this information in a creation transformation
 end
 
 type WorkerPartition
-    ID::Int64
     data::Dict{Any, Array{Any}}
 end
 
