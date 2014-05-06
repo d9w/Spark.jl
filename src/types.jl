@@ -50,7 +50,6 @@ type Worker
     masterport::Int64
 
     rdds::Dict{Int64, WorkerRDD}
-    data::Dict{Int64, Dict{Int64, Array{}}}
 
     function Worker(hostname::ASCIIString, port::Int64)
         new(0, hostname, port, true, {}, "", 0, Dict{Int64, RDD}(), Dict{Int64, Dict{Int64, Array{}}}())
