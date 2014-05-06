@@ -1,3 +1,12 @@
+#This object describes a deterministic partitioning
+#keys for which hash(key) = partition mod total_partitions
+#is true are in this partition. The rdd should probably store the
+#partitioning to be able to recover specific partitions.
+type Partitioner
+    partition_number::Int
+    total_partitions::Int
+end
+
 type PID
     node::(String, Int)
     ID::Int64

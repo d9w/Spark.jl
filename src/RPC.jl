@@ -169,3 +169,36 @@ function recv_send_coworker(worker::Worker, args::Dict)
 end
 
 # TODO etc. (get, get_keys)
+
+#Returns tuple (boolean, data) where the first element should tell whether the operation was
+#successful. data contains all the key in the remote partition that belong in the partition
+#specified by the partitioner object
+function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64, partitioner::Partitioner)
+    rdd = getRDD(worker, rdd_int)
+    args = {"rdd_int" => rdd_int, "partition_id" => partition_id, "partitioner" => partitioner}
+    #let origin_worker be the worker where the partition is hosted
+    println(origin_worker, json(:call => "get_keys", :args => args))
+    try 
+        reply = JSON.parse(readline(master))["reply"]
+        return (true, reply)
+    catch e
+        return (false, Array(Any, 0))
+    end
+end
+
+#returns keys in partition that belong to the provided partition object 
+function get_keys(worker::Worker, args::Dict)
+    rdd_id::Int64 = args["rdd_id"]
+    partition_id::Int64 = args["partition_id"]
+    partitioner::Partitioner = args["partitioner"]
+    data = worker.rdds[rdd_id].partitions[partition_id]
+    send_data::Dict{Any, Array{Any}} = Dict{Any, Array{Any}}()
+
+    for key in keys(data)
+        if hash(key) % partitioner.total_partitions == partitioner.partition_number
+            send_data[key] = data[key]
+        end
+    end
+
+    return {"reply" => send_data}
+end
