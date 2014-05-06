@@ -23,9 +23,10 @@ end
 type RDD
     ID::Int64
     partitions::Array{PID}
-    dependencies::Dict{Int64,Array{PID}}
+    dependencies::Dict{Int64, Array{PID}}
     operation::Transformation
-    origin_file::String
+    # origin_file::String - not all RDDs have one origin, like the result of a join
+    #                       we can just keep this information in a creation transformation
 end
 
 type WorkerPartition

@@ -88,50 +88,40 @@ function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
     # send new RDD and transformation (something like:)
     # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})
 
-    new_ID::Int64 = length(master.rdds) + 1
-    num_partitions = length(master.activeworkers)
-    partitions = {}
-    part_i = 0
-    for worker in master.activeworkers
-        # TODO: change to be based on new WorkerRef type
-        partitions = cat(1, partitions, PID{(nodeString, port), part_i})
-        part_i = part_i + 1
-    end
+    ID::Int64 = length(master.rdds) + 1
+    # assume hash partition with n = number of active workers
+    partitions = create(HashPartitioner(), master)
     dependencies = Dict{Any, Array{Any}}()
     for rdd in rdds
         dependencies[rdd.ID] = rdd.partitions
     end
 
-    new_RDD = RDD(new_ID, partitions, dependencies, oper, "")
+    new_RDD = RDD(ID, partitions, dependencies, oper)
+    allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
 
-    new_partitions::Array{PID} = calculate_partitions(master, oper)
-    # figure out number of partitions = number of partitions
-    new_dependencies::Array{Array{PID}} = calculate_dependencies(master, oper)
-
-    @parallel for i = 1:length(new_partitions)
-        processed_partition = false
-        while !processed_partition
-            #select an active worker (preferably unique for each partition)
-            #args = {:rdd_id => new_ID, :partition_id => new_partitions[i].ID, :partition = new_partitions[i].partition, :dependencies => new_dependencies, :oper => oper}
-            #rpc(worker, "create_partition", args) 
-            #if successful processed_partition = true
-        end
-    end
-
+#    @parallel for i = 1:length(new_partitions)
+#        processed_partition = false
+#        while !processed_partition
+#            #select an active worker (preferably unique for each partition)
+#            #args = {:rdd_id => new_ID, :partition_id => new_partitions[i].ID, :partition = new_partitions[i].partition, :dependencies => new_dependencies, :oper => oper}
+#            #rpc(worker, "create_partition", args)
+#            #if successful processed_partition = true
+#        end
+#    end
+#
     #send rdd to all workers that got a partition in the last step
 end
 
 # call: do an action
-function apply(master::Master, RDD_ID::Int64, oper::Action)
-    # no new RDD is necessary, should just be:
-    # allrpc(master, "apply", {:RDD => master.RDDs[RDD_ID], :oper => oper})
+function apply(master::Master, rdd::RDD, oper::Action)
+    allrpc(master, "apply", {:rdd => rdd, :oper => oper})
 end
 
 # handler: perform the transformation OR action (operation)
 function apply(worker::Worker, args::Dict)
     # send to an evaluator for each operation, based on name, like:
-    # oper = args["oper"]
-    # eval(Expr(:call, symbol(oper.name), args["RDD"], oper.args))
+    oper = args["oper"]
+    eval(Expr(:call, symbol(oper.name), args["rdd"], oper.args))
     return true
 end
 
