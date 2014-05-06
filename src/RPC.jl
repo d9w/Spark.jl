@@ -82,17 +82,30 @@ function shareworkers(worker::Worker, args::Dict)
 end
 
 # call: do a transformation (do is a keyword, using "apply")
-#operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
-function apply(master::Master, oper::Transformation)
+# operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
+function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
     # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})
-    
-    new_ID::Int64 = length(master.rdds) + 1
 
-    #transformation dependant steps
+    new_ID::Int64 = length(master.rdds) + 1
+    num_partitions = length(master.activeworkers)
+    partitions = {}
+    part_i = 0
+    for worker in master.activeworkers
+        # TODO: change to be based on new WorkerRef type
+        partitions = cat(1, partitions, PID{(nodeString, port), part_i})
+        part_i = part_i + 1
+    end
+    dependencies = Dict{Any, Array{Any}}()
+    for rdd in rdds
+        dependencies[rdd.ID] = rdd.partitions
+    end
+
+    new_RDD = RDD(new_ID, partitions, dependencies, oper, "")
 
     new_partitions::Array{PID} = calculate_partitions(master, oper)
+    # figure out number of partitions = number of partitions
     new_dependencies::Array{Array{PID}} = calculate_dependencies(master, oper)
 
     @parallel for i = 1:length(new_partitions)

@@ -20,16 +20,11 @@ type Action
     arguments::Dict{String, Any}
 end
 
-type Record
-    operation::Transformation
-    sources::Dict{Int64,Array{(Int64,PID)}}
-end
-
 type RDD
     ID::Int64
     partitions::Array{PID}
-    dependencies::Array{Int64}
-    history::Array{Record}
+    dependencies::Dict{Int64,Array{PID}}
+    operation::Transformation
     origin_file::String
 end
 
@@ -39,11 +34,8 @@ type WorkerPartition
 end
 
 type WorkerRDD
-    ID::Int64
-    partitions::Array{WorkerPartition}
-    dependencies::Array{Int64}
-    history::Array{Record}
-    origin_file::String
+    partitions::Dict{Int64, WorkerPartition}
+    rdd::RDD
 end
 
 type Worker # for the worker
