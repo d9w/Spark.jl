@@ -8,14 +8,14 @@
 function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
     success = true
     for w in master.workers
-        if w.active && !rpc(master, w, func, args)
+        if w.active && !rpc(w, func, args)
             success = false
         end
     end
     return success
 end
 
-function rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::Dict)
+function rpc(worker::WorkerRef, func::ASCIIString, args::Dict)
     socket = worker.socket
     m = {:call => func, :args => args}
     encoded = json(m)
