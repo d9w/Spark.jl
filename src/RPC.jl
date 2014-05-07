@@ -26,6 +26,7 @@ function rpc(worker::WorkerRef, func::ASCIIString, args::Dict)
         result = JSON.parse(readline(worker.socket))
         return result["result"]
     catch e
+        # TODO reconstruct parts of the RDD that were on this failing worker
         worker.active = false
         return false
     end
@@ -158,7 +159,10 @@ end
 # Get an RDD from the master or return our local copy if it exists
 function fetch_worker_rdd(worker::Worker, rdd_int::Int64)
     if !(rdd_int in keys(worker.rdds))
-        worker.rdds[rdd_int] = getRDD(worker, rdd_int)
+        got_rdd = getRDD(worker, rdd_int)
+        if !(rdd_int in keys(worker.rdds))
+            worker.rdds[rdd_int] = got_rdd
+        end
     end
     return worker.rdds[rdd_int]
 end
@@ -197,4 +201,18 @@ function get_key_data(worker::Worker, args::Dict)
     key::Any = args["key"]
     data = worker.rdds[rdd_id].partitions[partition_id].data[key]
     return {"result" => data}
+end
+
+# Send key
+function send_key(worker::Worker, rdd_id::Int64, partition_id::Int64, key::Any, value::Array{Any})
+    rpc(worker, "recv_key", {:rdd_id => rdd_id, :partition_id => partition_id, :key => key, :value => value})
+end
+
+function recv_key(worker::Worker, args::Dict)
+    rdd_id = args["rdd_id"]
+    key = args["key"]
+    partition_id = args["partition_id"]
+    value = args["value"]
+    rdd = fetch_worker_rdd(worker, rdd_id)
+    rdd.partitions[partition_id].data[key] = value
 end

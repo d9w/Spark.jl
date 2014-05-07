@@ -12,11 +12,6 @@ type WorkerRef # for the master
     active::Bool
 end
 
-type PID
-    node::WorkerRef
-    ID::Int64
-end
-
 type Transformation
     name::ASCIIString
     arguments::Dict{String, Any}
@@ -29,8 +24,8 @@ end
 
 type RDD
     ID::Int64
-    partitions::Array{PID}
-    dependencies::Dict{Int64, Array{PID}}
+    partitions::Dict{Int64, WorkerRef}
+    dependencies::Dict{Int64, Dict{Int64, WorkerRef}}
     operation::Transformation
     partitioner::Partitioner
 end

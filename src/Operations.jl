@@ -58,6 +58,18 @@ function sort(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
     return true
 end
 
+function partition_by(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+    old_rdd_id = keys(newRDD.rdd.dependencies)[1]
+    local_rdd_copy = worker.rdds[old_rdd_id]
+    for partition in local_rdd_copy.partitions
+        for key in keys(partition.data)
+            new_partition = assign(local_rdd_copy.rdd.partitioner, newRDD.rdd, key)
+            new_worker = newRDD.rdd.partitions[new_partition]
+            send_key(worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
+        end
+    end
+    return true
+end
 
 #############
 ## Actions ##
