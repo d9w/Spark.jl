@@ -14,12 +14,12 @@ end
 
 type Transformation
     name::ASCIIString
-    arguments::Dict{String, Any}
+    arguments::Dict
 end
 
 type Action
     name::ASCIIString
-    arguments::Dict{String, Any}
+    arguments::Dict
 end
 
 type RDD
