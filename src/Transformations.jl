@@ -58,12 +58,18 @@ function sort(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
     return true
 end
 
+function partition_by(master::Master, rdd::RDD, partitioner::Partitioner)
+    op = Transformation("partition_by", {"partitioner" => partitioner})
+    doop(master, {rdd}, op, partitioner)
+end
+
 function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    partitioner = args["partitioner"]
     old_rdd_id = keys(newRDD.rdd.dependencies)[1]
     local_rdd_copy = worker.rdds[old_rdd_id]
     for partition in local_rdd_copy.partitions
         for key in keys(partition.data)
-            new_partition = assign(local_rdd_copy.rdd.partitioner, newRDD.rdd, key)
+            new_partition = assign(partitioner, newRDD.rdd, key)
             new_worker = newRDD.rdd.partitions[new_partition]
             send_key(worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
         end
@@ -73,6 +79,11 @@ end
 
 function test_reader(line::String)
     return {hash(line), chomp(line)}
+end
+
+function input(master::Master, filename::ASCIIString, reader::ASCIIString)
+    op = Transformation("input", {"filename" => filename, "reader" => reader})
+    doop(master, {}, op, NoPartitioner())
 end
 
 function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)

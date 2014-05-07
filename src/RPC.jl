@@ -75,21 +75,19 @@ end
 
 # call: do a transformation (do is a keyword, using "doop")
 # operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
-function doop(master::Master, rdds::Array, oper::Transformation)
+function doop(master::Master, rdds::Array, oper::Transformation, part::Partitioner)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
     # allrpc(master, "doop", {:RDD => new_RDD, :oper => oper})
 
     ID::Int64 = length(master.rdds) + 1
-    # assume hash partition with n = number of active workers
-    partitioner = HashPartitioner()
-    partitions = create(partitioner, master)
+    partitions = create(part, master)
     dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
     for rdd in rdds
         dependencies[rdd.ID] = rdd.partitions
     end
 
-    new_RDD = RDD(ID, partitions, dependencies, oper, partitioner)
+    new_RDD = RDD(ID, partitions, dependencies, oper, part)
     master.rdds[ID] = new_RDD
     return_bool = true
     for part_id in keys(partitions)

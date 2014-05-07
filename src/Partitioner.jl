@@ -1,6 +1,6 @@
 using Spark
 
-function create(p::HashPartitioner, master::Master)
+function create(p::NoPartitioner, master::Master)
     partitions = Dict{Int64, WorkerRef}()
     part_i = 0
     for worker in master.workers
@@ -12,8 +12,16 @@ function create(p::HashPartitioner, master::Master)
     return partitions
 end
 
+function assign(p::NoPartitioner, rdd::RDD, key::Any)
+    return keys(rdd.partitions)
+end
+
+function create(p::HashPartitioner, master::Master)
+    return create(NoPartitioner(), master)
+end
+
 function assign(p::HashPartitioner, rdd::RDD, key::Any)
-    return convert(Int64, hash(key) % length(rdd.partitions))
+    return {convert(Int64, hash(key) % length(rdd.partitions))}
 end
 
 # TODO i thought that the partitioner would be given the num partitions, 

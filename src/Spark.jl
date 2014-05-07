@@ -7,6 +7,7 @@ include("RPC.jl")
 include("Worker.jl")
 include("Master.jl")
 include("Partitioner.jl")
-include("Operations.jl")
+include("Transformations.jl")
+include("Actions.jl")
 
 end

@@ -5,6 +5,9 @@ type HashPartitioner <: Partitioner
 #    total_partitions::Int
 end
 
+type NoPartitioner <: Partitioner
+end
+
 type WorkerRef # for the master
     hostname::ASCIIString
     port::Int64
