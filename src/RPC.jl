@@ -89,7 +89,7 @@ function doop(master::Master, rdds::Array{RDD}, oper::Transformation)
     end
 
     new_RDD = RDD(ID, partitions, dependencies, oper, partitioner)
-    allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
+    return allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
 end
 
 # call: do an action
@@ -108,7 +108,7 @@ function doop(worker::Worker, args::Dict)
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
     result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], oper.args))
-    return result 
+    return {:result => result}
 end
 
 ##############################
