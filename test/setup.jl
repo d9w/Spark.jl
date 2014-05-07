@@ -12,7 +12,7 @@ end
 
 function main()
     master = Spark.Master("127.0.0.1", 3333)
-    for i in 1:4
+    for i in 0:2
         @async start_worker(6666+i)
     end
     # fill in master.workers

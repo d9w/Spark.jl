@@ -1,10 +1,6 @@
 using JSON
 using Spark
 
-#function Worker(port::Int64, masterhostname::ASCIIString, masterport::Int64)
-#    Worker(port, true, {}, masterhostname, masterport)
-#end
-
 function start(worker::Worker)
     server = listen(IPv4(0), worker.port)
     println("starting")

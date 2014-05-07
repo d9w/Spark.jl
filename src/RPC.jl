@@ -75,7 +75,7 @@ end
 
 # call: do a transformation (do is a keyword, using "apply")
 # operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
-function doop(master::Master, rdds::Array{RDD}, oper::Transformation)
+function doop(master::Master, rdds::Array, oper::Transformation)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
     # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})

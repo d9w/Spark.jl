@@ -1,8 +1,8 @@
 abstract Partitioner
 
 type HashPartitioner <: Partitioner
-    partition_number::Int
-    total_partitions::Int
+#    partition_number::Int
+#    total_partitions::Int
 end
 
 type WorkerRef # for the master
@@ -55,6 +55,7 @@ type Worker # for the worker
         x.hostname = hostname
         x.port = port
         x.rdds = Dict{Int64, WorkerRDD}()
+        x.active = true
         return x
     end
 end
