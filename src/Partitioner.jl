@@ -1,11 +1,11 @@
 using Spark
 
 function create(p::HashPartitioner, master::Master)
-    partitions = {}
+    partitions = Dict{Int64, WorkerRef}
     part_i = 0
     for worker in master.workers
         if worker.active
-            partitions = cat(1, partitions, PID{worker, part_i})
+            partitions[part_i] = worker
             part_i = part_i + 1
         end
     end
