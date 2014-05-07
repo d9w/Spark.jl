@@ -196,10 +196,14 @@ end
 # Get the data for a specific key
 function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
     rdd = fetch_worker_rdd(worker, rdd_int)
-    partition_id = assign(worker.rdds[rdd_int].rdd.partitioner, worker.rdds[rdd_int].rdd, key)
-    origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
-    args = {:rdd_id => rdd_id, :partition_id => partition_id, :key => key}
-    return rpc(origin_worker, "get_key_data", args)
+    partition_ids = assign(worker.rdds[rdd_int].rdd.partitioner, worker.rdds[rdd_int].rdd, key)
+    return_bool = true
+    for partition_id in partition_ids
+        origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
+        args = {:rdd_id => rdd_id, :partition_id => partition_id, :key => key}
+        return_bool = return_bool & rpc(origin_worker, "get_key_data", args)
+    end
+    return return_bool #TODO: should actually return the data
 end
 
 # Returns key data for a particular (rdd, partition, key)

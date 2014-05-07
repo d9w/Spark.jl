@@ -34,6 +34,9 @@ function union(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
 end
 
 # can have wide or narrow dependencies
+function join(master::Master, rddA::RDD, rddB::RDD, newPartitioner::Partitioner)
+end
+
 function join(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
     return true
 end
@@ -69,9 +72,11 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
     local_rdd_copy = worker.rdds[old_rdd_id]
     for partition in local_rdd_copy.partitions
         for key in keys(partition.data)
-            new_partition = assign(partitioner, newRDD.rdd, key)
-            new_worker = newRDD.rdd.partitions[new_partition]
-            send_key(worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
+            new_partitions = assign(partitioner, newRDD.rdd, key)
+            for new_partition in new_partitions
+                new_worker = newRDD.rdd.partitions[new_partition]
+                send_key(worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
+            end
         end
     end
     return true
