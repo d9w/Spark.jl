@@ -51,7 +51,11 @@ type Worker # for the worker
     rdds::Dict{Int64, WorkerRDD}
 
     function Worker(hostname::ASCIIString, port::Int64)
-        new(0, hostname, port, true, "", 0, Dict{Int64, RDD}(), Dict{Int64, Dict{Int64, Array{}}}())
+        x = new()
+        x.hostname = hostname
+        x.port = port
+        x.rdds = Dict{Int64, WorkerRDD}()
+        return x
     end
 end
 
@@ -63,6 +67,11 @@ type Master
     workers::Array{WorkerRef}
 
     function Master(hostname::ASCIIString, port::Int64)
-        new(hostname, port, {}, {})
+        x = new()
+        x.hostname = hostname
+        x.port = port
+        x.rdds = {}
+        x.workers = {}
+        return x
     end
 end
