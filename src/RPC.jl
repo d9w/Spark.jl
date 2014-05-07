@@ -75,7 +75,7 @@ end
 
 # call: do a transformation (do is a keyword, using "apply")
 # operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
-function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
+function doop(master::Master, rdds::Array{RDD}, oper::Transformation)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
     # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})
@@ -93,13 +93,13 @@ function apply(master::Master, rdds::Array{RDD}, oper::Transformation)
 end
 
 # call: do an action
-function apply(master::Master, rdd::RDD, oper::Action)
+function doop(master::Master, rdd::RDD, oper::Action)
     allrpc(master, "apply", {:rdd => rdd, :oper => oper})
 end
 
 
 # handler: do an action or transformation on a worker
-function apply(worker::Worker, args::Dict)
+function doop(worker::Worker, args::Dict)
     oper = args["oper"]
     rdd = args["rdd"]
     rdd_id = args["rdd"].ID
