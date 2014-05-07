@@ -72,7 +72,7 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
 end
 
 function test_reader(line::String)
-    return {hash(line), chomp(line)}
+    return {(hash(line), chomp(line))}
 end
 
 function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
@@ -81,19 +81,24 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
 
     stream = open(file_name)
     total_lines = countlines(stream)
+    seekstart(stream)
 
-    lines_partition = floor(total_lines / length(newRDD.partitions))
-    begin_line = lines_partition * (part_id - 1) + 1
-    end_line = lines_partition * part_id
-    for l = 1:begin_line
+
+    lines_partition = floor(total_lines / length(newRDD.rdd.partitions))
+    begin_line = lines_partition * part_id
+    end_line = lines_partition * (part_id + 1) - 1
+    if part_id == (length(newRDD.rdd.partitions) - 1)
+        end_line = total_lines - 1 # last partition always goes to the end
+    end
+    for l = 0:begin_line-1
         line::String = readline(stream)
     end
     partition = WorkerPartition(Dict{Any, Array{Any}}())
 
     for l = begin_line:end_line
         line::String = readline(stream)
-        kv_pairs = eval(Expr(:call, reader, line))
-        for kv in kvpairs
+        kv_pairs = eval(Expr(:call, symbol(reader), line))
+        for kv in kv_pairs
             if kv[2] in keys(partition.data)
                 push!(partition.data[kv[1]], kv[2])
             else

@@ -3,7 +3,7 @@ using Spark
 
 function start(worker::Worker)
     server = listen(IPv4(0), worker.port)
-    println("starting")
+    println("Starting worker")
     while worker.active
         sock = accept(server)
         while worker.active

@@ -94,7 +94,6 @@ function doop(master::Master, rdds::Array, oper::Transformation)
     return_bool = true
     for part_id in keys(partitions)
         result = rpc(partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
-        println(result)
         if result == false
             return_bool = false
         end
@@ -119,8 +118,6 @@ function doop(worker::Worker, args::Dict)
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
     result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
-    println("finished")
-    println(result)
     return {:result => result}
 end
 
