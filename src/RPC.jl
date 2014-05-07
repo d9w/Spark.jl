@@ -89,7 +89,12 @@ function doop(master::Master, rdds::Array{RDD}, oper::Transformation)
     end
 
     new_RDD = RDD(ID, partitions, dependencies, oper, partitioner)
-    return allrpc(master, "apply", {:rdd => new_RDD, :oper => oper})
+    master.rdds[ID] = new_RDD
+    return_bool = true
+    for part_id in keys(partitions)
+        return_bool = return_bool & rpc(partitions[part_id], "apply", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
+    end
+    return return_bool
 end
 
 # call: do an action
@@ -103,11 +108,12 @@ function doop(worker::Worker, args::Dict)
     oper = args["oper"]
     rdd = args["rdd"]
     rdd_id = args["rdd"].ID
+    part_id = args["part_id"]
     # Create a new worker RDD reference and add the metadata, empty data.
     if !(rdd_id in keys(worker.rdds))
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
-    result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], oper.args))
+    result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.args))
     return {:result => result}
 end
 

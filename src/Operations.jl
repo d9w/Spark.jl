@@ -58,7 +58,7 @@ function sort(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
     return true
 end
 
-function partition_by(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     old_rdd_id = keys(newRDD.rdd.dependencies)[1]
     local_rdd_copy = worker.rdds[old_rdd_id]
     for partition in local_rdd_copy.partitions
@@ -69,6 +69,41 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
         end
     end
     return true
+end
+
+function test_reader(line::String)
+    return {hash(line), chomp(line)}
+end
+
+function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    reader = args["reader"]
+    file_name = args["file_name"]
+
+    stream = open(file_name)
+    total_lines = countlines(stream)
+
+    lines_partition = floor(total_lines / length(newRDD.partitions))
+    begin_line = lines_partition * (part_id - 1) + 1
+    end_line = lines_partition * part_id
+    for l = 1:begin_line
+        line::String = readline(stream)
+    end
+    partition = Dict()
+
+    for l = begin_line:end_line
+        line::String = readline(stream)
+        kv_pairs = eval(Expr(:call, reader, line))
+        for kv in kvpairs
+            if kv[2] in keys(partition)
+                push!(partition[kv[1]], kv[2])
+            else
+                partition[kv[1]] = {kv[2]}
+            end
+        end
+    end
+
+    #Adds partition to partition map
+    newRDD.partitions[part_id] = partition
 end
 
 #############
