@@ -1,7 +1,7 @@
 using Spark
 
 function create(p::HashPartitioner, master::Master)
-    partitions = Dict{Int64, WorkerRef}
+    partitions = Dict{Int64, WorkerRef}()
     part_i = 0
     for worker in master.workers
         if worker.active
