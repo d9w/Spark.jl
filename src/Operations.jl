@@ -77,7 +77,7 @@ end
 
 function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     reader = args["reader"]
-    file_name = args["file_name"]
+    file_name = args["filename"]
 
     stream = open(file_name)
     total_lines = countlines(stream)
@@ -88,16 +88,16 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     for l = 1:begin_line
         line::String = readline(stream)
     end
-    partition = Dict()
+    partition = WorkerPartition(Dict{Any, Array{Any}}())
 
     for l = begin_line:end_line
         line::String = readline(stream)
         kv_pairs = eval(Expr(:call, reader, line))
         for kv in kvpairs
-            if kv[2] in keys(partition)
-                push!(partition[kv[1]], kv[2])
+            if kv[2] in keys(partition.data)
+                push!(partition.data[kv[1]], kv[2])
             else
-                partition[kv[1]] = {kv[2]}
+                partition.data[kv[1]] = {kv[2]}
             end
         end
     end

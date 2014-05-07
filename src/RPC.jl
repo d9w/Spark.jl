@@ -16,7 +16,7 @@ function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
 end
 
 function rpc(worker::WorkerRef, func::ASCIIString, args::Dict)
-    if !worker.socket
+    if worker.socket == null || worker.socket.status != 3
         worker.socket = connect(worker.hostname, worker.port)
     end
     m = {:call => func, :args => args}
@@ -73,17 +73,18 @@ function wprint(worker::Worker, args::Dict)
     return true
 end
 
-# call: do a transformation (do is a keyword, using "apply")
+# call: do a transformation (do is a keyword, using "doop")
 # operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
 function doop(master::Master, rdds::Array, oper::Transformation)
     # create new RDD history and partitioning by transformation
     # send new RDD and transformation (something like:)
-    # allrpc(master, "apply", {:RDD => new_RDD, :oper => oper})
+    # allrpc(master, "doop", {:RDD => new_RDD, :oper => oper})
 
     ID::Int64 = length(master.rdds) + 1
     # assume hash partition with n = number of active workers
-    partitions = create(HashPartitioner(), master)
-    dependencies = Dict{Any, Array{Any}}()
+    partitioner = HashPartitioner()
+    partitions = create(partitioner, master)
+    dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
     for rdd in rdds
         dependencies[rdd.ID] = rdd.partitions
     end
@@ -92,28 +93,34 @@ function doop(master::Master, rdds::Array, oper::Transformation)
     master.rdds[ID] = new_RDD
     return_bool = true
     for part_id in keys(partitions)
-        return_bool = return_bool & rpc(partitions[part_id], "apply", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
+        result = rpc(partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
+        println(result)
+        if result == false
+            return_bool = false
+        end
     end
     return return_bool
 end
 
 # call: do an action
 function doop(master::Master, rdd::RDD, oper::Action)
-    allrpc(master, "apply", {:rdd => rdd, :oper => oper})
+    allrpc(master, "doop", {:rdd => rdd, :oper => oper})
 end
 
 
 # handler: do an action or transformation on a worker
 function doop(worker::Worker, args::Dict)
-    oper = args["oper"]
-    rdd = args["rdd"]
-    rdd_id = args["rdd"].ID
+    oper = Transformation(args["oper"])
+    rdd = RDD(args["rdd"])
+    rdd_id = rdd.ID
     part_id = args["part_id"]
     # Create a new worker RDD reference and add the metadata, empty data.
     if !(rdd_id in keys(worker.rdds))
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
-    result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.args))
+    result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
+    println("finished")
+    println(result)
     return {:result => result}
 end
 
