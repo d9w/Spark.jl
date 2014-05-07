@@ -107,16 +107,3 @@ end
 function send_rdd(worker::Worker, rdd::RDD)
     worker.rdds[rdd.ID] = rdd
 end
-
-#TODO fix tests. The logic that reads the file was barely changed so it
-#should work without many complications.
-#Tests
-function test_reader(line::String)
-    return chomp(line)
-end
-
-function test()
-    worker_read("test", 1, 1, test_reader, String) 
-    worker_read("test", 1, 2, test_reader, String) 
-    worker_read("test", 1, 9, test_reader, String) 
-end
