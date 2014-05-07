@@ -19,10 +19,11 @@ function main()
     Spark.load(master, "default_workers.json")
     # start master listener
     Spark.initserver(master)
-    input = Spark.Transformation("input", {"filename" => "RDDA.txt", "reader" => "test_reader"})
-    Spark.doop(master, {}, input)
-    partition = Spark.Transformation("partition_by", Dict())
-    Spark.doop(master, {master.rdds[1]}, partition)
+    println("done initserver")
+    Spark.input(master, "RDDA.txt", "test_reader")
+    println("done reading")
+    rdd = master.rdds[1]
+    Spark.partition_by(master, rdd, Spark.HashPartitioner())
 end
 
 main()
