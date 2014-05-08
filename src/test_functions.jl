@@ -20,6 +20,13 @@ function test_map(key, value::Array)
     end
 end
 
+function double_map(key, value::Array)
+    new_kvs = {}
+    for v in value
+        push!(new_kvs, (key, {2*v}))
+    end
+end
+
 function test_filter(key, value::Array)
     length(value) == 1
 end

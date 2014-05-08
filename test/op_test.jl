@@ -51,6 +51,14 @@ function filter_test(master::Master)
 end
 
 function map_test(master::Master)
+    rdd = Spark.input(master, "RDDA.txt", "int_reader")
+    collection = Spark.collect(master, rdd)
+    mapped_rdd = map(master, rdd, "double_map")
+    @assert Spark.count(master, rdd) == Spark.count(master, partitioned_rdd)
+    for kv in collection
+        values = Spark.lookup(master, mapped_rdd, kv[1])
+        @assert 2*(kv[2][1]) == values[1]
+    end
 end
 
 function group_by_key_test(master::Master)
