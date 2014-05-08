@@ -28,7 +28,7 @@ end
 function lookup_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     val = Spark.lookup(master, rdd, 3)
-    println(val)
+    dump(val)
     @assert val == {3}
 end
 

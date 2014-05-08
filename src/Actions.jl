@@ -46,12 +46,11 @@ end
 function lookup(master::Master, rdd::RDD, key::Any)
     op = Action("lookup", {"key" => key})
     results = doop(master, rdd, op)
-    return results
+    final = {}
     for r in results
-        if length(r) == 1
-            return r
-        end
+        final = cat(1, final, r)
     end
+    return final
 end
 
 function lookup(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
@@ -61,11 +60,4 @@ function lookup(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
     else
         return {}
     end
-    results = {}
-    for key in keys(rdd.partitions[part_id].data)
-        if key == args["key"]
-            push!(results, (key, rdd.partitions[part_id].data[key]))
-        end
-    end
-    return results
 end
