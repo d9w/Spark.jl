@@ -86,11 +86,11 @@ function union(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
 end
 
 # can have wide or narrow dependencies
-function join(master::Master, rddA::RDD, rddB::RDD, newPartitioner::Partitioner)
-    partition_by(master, rddA, newPartitioner)
-    partition_by(master, rddB, newPartitioner)
+function join(master::Master, rddA::RDD, rddB::RDD)
+    partition_by(master, rddA, HashPartitioner())
+    partition_by(master, rddB, HashPartition())
     op = Transformation("join", {"rddA" => rddA, "rddB" => rddB})
-    doop(master, {rddA, rddB}, op, newPartitioner)
+    doop(master, {rddA, rddB}, op, HashPartitioner())
 end
 
 # makes the assumption that RDDs are co-partitioned, if the partition exists
