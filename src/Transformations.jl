@@ -5,61 +5,85 @@
 import Base.collect
 
 # narrow
-function map(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # narrow
-function filter(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function filter(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # narrow
-function flat_map(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function flat_map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # wide
-function group_by_key(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function group_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # wide
-function reduce_by_key(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function reduce_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # call on 2 RDDs returns 1 RDD whose partitions are the union of those of the parents.
 # each child partition is computed through a narrow dependency on its parent
-function union(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function union(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # can have wide or narrow dependencies
 function join(master::Master, rddA::RDD, rddB::RDD, newPartitioner::Partitioner)
+    partition_by(master, rddA, newPartitioner)
+    partition_by(master, rddB, newPartitioner)
+    op = Transformation("join", {"rddA" => rddA, "rddB" => rddB})
+    doop(master, {rddA, rddB}, op, newPartitioner)
 end
 
-function join(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+# merge the dictionaries with append as the key conflict behavior
+function append_merge(source::Dict, dest::Dict)
+    for key in keys(source)
+        if key in keys(dest)
+            push!(dest[key], source[key])
+        else
+            dest[key] = {source[key]}
+        end
+    end
+end
+
+# makes the assumption that RDDs are co-partitioned, if the partition exists
+function join(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    if args["rddA"].ID in keys(worker.rdds)
+        worker_rdd = worker.rdds[args["rddA"].ID]
+        append_merge(worker_rdd.partitions[part_id], newRDD.partitions[part_id])
+    end
+    if args["rddB"].ID in keys(worker.rdds)
+        worker_rdd = worker.rdds[args["rddB"].ID]
+        append_merge(worker_rdd.partitions[part_id], newRDD.partitions[part_id])
+    end
     return true
 end
 
 # wide
-function cogroup(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function cogroup(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # wide
-function cross_product(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function cross_product(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # narrow
-function map_values(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function map_values(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
 # wide
-function sort(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
+function sort(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
