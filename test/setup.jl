@@ -6,10 +6,6 @@ function start_worker(port::Int64)
     println("done")
 end
 
-function test_reader(line::String)
-    return {hash(line), chomp(line)}
-end
-
 function main()
     master = Spark.Master("127.0.0.1", 3333)
     for i in 0:2
