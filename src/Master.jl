@@ -20,7 +20,9 @@ function load(master::Master, configfile)
             println("Couldn't connect to $hostname:$port...")
             showerror(STDERR, e)
         end
-        master.workers = cat(1, master.workers, [WorkerRef(hostname, port, socket, active)])
+        wf = WorkerRef(hostname, port, active)
+        master.workers = cat(1, master.workers, [wf])
+        master.sockets[wf] = socket
     end
 end
 

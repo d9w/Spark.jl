@@ -8,26 +8,48 @@
 function allrpc(master::Master, func::ASCIIString, args::Dict=Dict())
     success = true
     for w in master.workers
-        if w.active && !rpc(w, func, args)
+        if w.active && !master_rpc(master, w, func, args)
             success = false
         end
     end
     return success
 end
 
-function rpc(worker::WorkerRef, func::ASCIIString, args::Dict)
-    if worker.socket == null || worker.socket.status != 3
-        worker.socket = connect(worker.hostname, worker.port)
+function master_rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::Dict)
+    if !(worker in keys(master.sockets))
+        master.sockets[worker] = connect(worker.hostname, worker.port)
     end
+    socket = master.sockets[worker]
     m = {:call => func, :args => args}
     encoded = json(m)
     try
-        println(worker.socket, encoded)
-        result = JSON.parse(readline(worker.socket))
+        println(socket, encoded)
+        result = JSON.parse(readline(socket))
         return result["result"]
     catch e
         # TODO reconstruct parts of the RDD that were on this failing worker
         worker.active = false
+        master.sockets[worker] = None
+        return false
+    end
+end
+
+
+function worker_rpc(wk::Worker, wr::WorkerRef, func::ASCIIString, args::Dict)
+    if !(wr in keys(wk.sockets))
+        wk.sockets[wr] = connect(wr.hostname, wr.port)
+    end
+    socket = wk.sockets[wr]
+    m = {:call => func, :args => args}
+    encoded = json(m)
+    try
+        println(socket, encoded)
+        result = JSON.parse(readline(socket))
+        return result["result"]
+    catch e
+        # TODO reconstruct parts of the RDD that were on this failing worker
+        wr.active = false
+        wk.sockets[wr] = None
         return false
     end
 end
@@ -50,7 +72,7 @@ end
 # call: tell the workers the master hostname and port
 function identify(master::Master)
     for w = 1:length(master.workers)
-        rpc(master, w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
+        master_rpc(master, w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
     end
 end
 
@@ -87,11 +109,14 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
         dependencies[rdd.ID] = rdd.partitions
     end
 
+    println("dependencies calculated")
+
     new_RDD = RDD(ID, partitions, dependencies, oper, part)
     master.rdds[ID] = new_RDD
     return_bool = true
+    println("AA")
     for part_id in keys(partitions)
-        result = rpc(partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
+        result = master_rpc(master, partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
         if result == false
             return_bool = false
         end
@@ -107,6 +132,7 @@ end
 
 # handler: do an action or transformation on a worker
 function doop(worker::Worker, args::Dict)
+    println("worker - receiving RPC")
     oper = Transformation(args["oper"])
     rdd = RDD(args["rdd"])
     rdd_id = rdd.ID
@@ -115,7 +141,9 @@ function doop(worker::Worker, args::Dict)
     if !(rdd_id in keys(worker.rdds))
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
+    println("worker - doing eval")
     result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
+    println("worker - doing result")
     return {:result => result}
 end
 
@@ -181,7 +209,7 @@ function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64)
     args = {:rdd_int => rdd_int, :partition_id => partition_id}
     rdd = fetch_worker_rdd(worker, rdd_int)
     origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
-    return rpc(origin_worker, "get_keys", args)
+    return worker_rpc(worker, origin_worker, "get_keys", args)
 end
 
 # Returns keys in partition that belong to the provided partition object 
@@ -201,7 +229,9 @@ function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
     for partition_id in partition_ids
         origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
         args = {:rdd_id => rdd_id, :partition_id => partition_id, :key => key}
-        return_bool = return_bool & rpc(origin_worker, "get_key_data", args)
+        if worker_rpc(worker, origin_worker, "get_key_data", args) == false
+            return_bool = false 
+        end
     end
     return return_bool #TODO: should actually return the data
 end
@@ -217,7 +247,7 @@ end
 
 # Send key
 function send_key(worker::Worker, rdd_id::Int64, partition_id::Int64, key::Any, value::Array{Any})
-    rpc(worker, "recv_key", {:rdd_id => rdd_id, :partition_id => partition_id, :key => key, :value => value})
+    worker_rpc(worker, "recv_key", {:rdd_id => rdd_id, :partition_id => partition_id, :key => key, :value => value})
 end
 
 function recv_key(worker::Worker, args::Dict)

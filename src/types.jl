@@ -11,16 +11,14 @@ end
 type WorkerRef # for the master
     hostname::ASCIIString
     port::Int64
-    socket::Any
     active::Bool
 
-    WorkerRef(hostname, port, socket, active) = new(hostname, port, socket, active)
+    WorkerRef(hostname, port, active) = new(hostname, port, active)
     function WorkerRef(args::Dict{String, Any})
         # JSON dict -> WorkerRef
         x = new()
         x.hostname = args["hostname"]
         x.port = args["port"]
-        x.socket = None
         x.active = false
         return x
     end
@@ -93,12 +91,15 @@ type Worker # for the worker
 
     rdds::Dict{Int64, WorkerRDD}
 
+    sockets::Dict{WorkerRef, Any}
+    
     function Worker(hostname::ASCIIString, port::Int64)
         x = new()
         x.hostname = hostname
         x.port = port
         x.rdds = Dict{Int64, WorkerRDD}()
         x.active = true
+        x.sockets = Dict{WorkerRef, Any}()
         return x
     end
 end
@@ -109,6 +110,7 @@ type Master
 
     rdds::Dict{Int64, RDD}
     workers::Array{WorkerRef}
+    sockets::Dict{WorkerRef, Any}
 
     function Master(hostname::ASCIIString, port::Int64)
         x = new()
@@ -116,6 +118,7 @@ type Master
         x.port = port
         x.rdds = Dict{Int64, RDD}()
         x.workers = {}
+        x.sockets = Dict{WorkerRef, Any}()
         return x
     end
 end

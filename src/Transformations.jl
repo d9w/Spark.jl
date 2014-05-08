@@ -62,11 +62,13 @@ function sort(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
 end
 
 function partition_by(master::Master, rdd::RDD, partitioner::Partitioner)
+    println("master - doing partition_by")
     op = Transformation("partition_by", {"partitioner" => partitioner})
     doop(master, {rdd}, op, partitioner)
 end
 
 function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    println("worker $worker - doing partition_by")
     partitioner = args["partitioner"]
     old_rdd_id = keys(newRDD.rdd.dependencies)[1]
     local_rdd_copy = worker.rdds[old_rdd_id]
