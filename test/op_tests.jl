@@ -11,9 +11,7 @@ end
 function collect_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
-    println(collection)
     for kv in collection
-        println(kv)
         @assert kv[1] <= 10
         @assert length(kv[2]) == 1
         @assert kv[2][1] <= 10

@@ -7,7 +7,7 @@ function direct_reader(line::String)
 end
 
 function int_reader(line::String)
-    return {parse(chomp(line)), {parse(chomp(line))}}
+    return {(parse(chomp(line)), {parse(chomp(line))})}
 end
 
 # map functions should take a key, value pair and return an array
