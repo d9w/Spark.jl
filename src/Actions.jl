@@ -4,6 +4,8 @@
 
 import Base.collect
 
+#### Count ####
+
 # Count all the keys in an RDD
 function count(master::Master, rdd::RDD)
     op = Action("count", Dict())
@@ -14,6 +16,8 @@ end
 function count(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
     return length(collect(keys(rdd.partitions[part_id].data)))
 end
+
+#### Collect ####
 
 # Collect all keys in the RDD
 function collect(master::Master, rdd::RDD)
@@ -31,9 +35,12 @@ function collect(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
     return {(k, data[k]) for k in keys(data)}
 end
 
+#TODO reduce
 function reduce(worker::Worker, rdd::WorkerRDD, args::Dict{Any, Any})
     return None
 end
+
+#### Lookup ####
 
 # Look up a particular item in the RDD
 function lookup(master::Master, rdd::RDD, key::Any)
@@ -53,5 +60,5 @@ function lookup(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
             push!(results, (key, rdd.partitions[part_id].data[key]))
         end
     end
-    return results 
+    return results
 end

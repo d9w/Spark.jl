@@ -39,5 +39,5 @@ function test_filter(key, value::Array)
 end
 
 function number_filter(key, value::Array)
-   key <= 5
+    key <= 5
 end

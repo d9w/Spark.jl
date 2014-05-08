@@ -4,7 +4,6 @@
 
 import Base.collect
 
-
 # merge the dictionaries with append as the key conflict behavior
 function append_merge(source::Dict, dest::Dict)
     for key in keys(source)
@@ -31,6 +30,8 @@ function append_merge(source::Array, dest::Dict)
     end
 end
 
+#### Map ####
+
 # require that map function is of the form func(key::Any, value::Array{Any})
 function map(master::Master, rdd::RDD, map_func::ASCIIString)
     op = Transformation("map", {"function" => map_func})
@@ -50,6 +51,8 @@ function map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
+#### Filter ####
+
 function filter(master::Master, rdd::RDD, filter_func::ASCIIString)
     op = Transformation("filter", {"function" => filter_func})
     doop(master, {rdd}, op, NoPartitioner())
@@ -64,10 +67,7 @@ function filter(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
-# narrow
-function flat_map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    return true
-end
+#### Group by key ####
 
 function group_by_key(master::Master, rdd::RDD)
     newRDD = partition_by(master, rdd, HashPartitioner())
@@ -85,18 +85,13 @@ function group_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
     return true
 end
 
-# wide
+#TODO reduce_by_key
 function reduce_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
-# call on 2 RDDs returns 1 RDD whose partitions are the union of those of the parents.
-# each child partition is computed through a narrow dependency on its parent
-function union(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    return true
-end
+#### Join ####
 
-# can have wide or narrow dependencies
 function join(master::Master, rddA::RDD, rddB::RDD)
     newA = partition_by(master, rddA, HashPartitioner())
     newB = partition_by(master, rddB, HashPartitioner())
@@ -122,25 +117,12 @@ function join(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
-# wide
-function cogroup(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    return true
-end
-
-# wide
-function cross_product(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    return true
-end
-
-# narrow
-function map_values(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    return true
-end
-
-# wide
+#TODO sort
 function sort(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
+
+#### Partition by ####
 
 function partition_by(master::Master, rdd::RDD, partitioner::Partitioner)
     op = Transformation("partition_by", {"partitioner" => partitioner})
@@ -163,6 +145,8 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
     end
     return true
 end
+
+#### Input ####
 
 function input(master::Master, filename::ASCIIString, reader::ASCIIString)
     op = Transformation("input", {"filename" => filename, "reader" => reader})

@@ -116,7 +116,7 @@ type Worker # for the worker
     rdds::Dict{Int64, WorkerRDD}
 
     sockets::Dict{WorkerRef, Any}
-    
+
     function Worker(hostname::ASCIIString, port::Int64)
         x = new()
         x.hostname = hostname

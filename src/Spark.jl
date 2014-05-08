@@ -2,7 +2,7 @@ using JSON
 
 module Spark
 
-include("types.jl")
+include("Types.jl")
 include("test_functions.jl")
 include("RPC.jl")
 include("Worker.jl")

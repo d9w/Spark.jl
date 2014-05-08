@@ -57,7 +57,6 @@ end
 ##############################
 # RPC: Master->Worker
 ##############################
-# TODO put more here - do(RDD, transformation), do(RDD, action), status(RDD)
 
 # call: kill all workers
 function kill(master::Master)
@@ -84,24 +83,9 @@ function identify(worker::Worker, args::Dict)
     return true
 end
 
-# call: Demo RPC
-function wprint(master::Master, s)
-    allrpc(master, "wprint", {:str => s})
-end
-
-# handler: Demo RPC
-function wprint(worker::Worker, args::Dict)
-    println(args["str"])
-    return true
-end
-
 # call: do a transformation (do is a keyword, using "doop")
-# operation should include every argument needed to complete the transformation (id of rdds (there can be more than one), nameof functions, comparator, etc. 
 function doop(master::Master, rdds::Array, oper::Transformation, part::Partitioner)
-    # create new RDD history and partitioning by transformation
-    # send new RDD and transformation (something like:)
-    # allrpc(master, "doop", {:RDD => new_RDD, :oper => oper})
-
+    # create new RDD fields
     ID::Int64 = length(master.rdds) + 1
     partitions = create(part, master)
     dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
@@ -109,8 +93,11 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
         dependencies[rdd.ID] = rdd.partitions
     end
 
+    # create RDD and add to master.rdds
     new_RDD = RDD(ID, partitions, dependencies, oper, part)
     master.rdds[ID] = new_RDD
+
+    # send doop rcp to all workers on new RDD
     return_bool = true
     for part_id in keys(partitions)
         result = master_rpc(master, partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
@@ -121,7 +108,7 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
     if return_bool
         return new_RDD
     end
-    return false # We need to do some retrying...
+    return false #TODO retry
 end
 
 # call: do an action - the caller is responsible for combining return values
@@ -236,10 +223,10 @@ function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
         origin_worker = worker.rdds[rdd_int].rdd.partitions[partition_id].node
         args = {:rdd_id => rdd_id, :partition_id => partition_id, :key => key}
         if worker_rpc(worker, origin_worker, "get_key_data", args) == false
-            return_bool = false 
+            return_bool = false
         end
     end
-    return return_bool #TODO: should actually return the data
+    return return_bool #TODO: should actually return the data?
 end
 
 # Returns key data for a particular (rdd, partition, key)
