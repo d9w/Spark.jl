@@ -20,18 +20,16 @@ function main()
     # start master listener
     Spark.initserver(master)
     println("done initserver")
-    rdd = Spark.input(master, "RDDA.txt", "test_reader")
+    rdd = Spark.input(master, "RDDA.txt", "direct_reader")
     println("done reading")
     partitioned_rdd = Spark.partition_by(master, rdd, Spark.HashPartitioner())
     println("done partition_by")
     count = Spark.count(master, partitioned_rdd)
     collect = Spark.collect(master, partitioned_rdd)
-    println("Count: $count Collect:")
-    for v in collect
-        key = v[1]
-        value = v[2]
-        println("[$key => $value]")
-    end
+    println("Count: $count Collect: $collect")
+    println("doing lookup")
+    val = Spark.lookup(master, partitioned_rdd, "3")
+    println(val) # 7
 end
 
 main()
