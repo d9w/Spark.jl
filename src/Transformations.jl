@@ -46,8 +46,17 @@ function map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
-# narrow
+function filter(master::Master, rdd::RDD, filter_func::ASCIIString)
+    op = Transformation("filter", {"function" => filter_func})
+    doop(master, {rdd}, op, NoPartitioner())
+end
+
+# assumes co-partitioning between new and old
 function filter(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    func = args["function"]
+    old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
+    partition = worker.rdds[old_rdd_id].partitions[part_id].data
+    newRDD.partitions[part_id].data = filter(func, partition)
     return true
 end
 

@@ -11,3 +11,7 @@ function test_map(key, value::Array)
         push!(new_kvs, (v, {key}))
     end
 end
+
+function test_filter(key, value::Array)
+    length(value) == 1
+end
