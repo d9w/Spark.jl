@@ -3,6 +3,7 @@
 #####################
 
 import Base.collect
+import Base.filter
 
 # merge the dictionaries with append as the key conflict behavior
 function append_merge(source::Dict, dest::Dict)
@@ -63,7 +64,8 @@ function filter(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     func = args["function"]
     old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
     partition = worker.rdds[old_rdd_id].partitions[part_id].data
-    newRDD.partitions[part_id].data = filter(func, partition)
+    newRDD.partitions[part_id] = WorkerPartition(Dict{Any, Array{Any}}())
+    newRDD.partitions[part_id].data = eval(Expr(:call, filter, symbol(func), partition))
     return true
 end
 

@@ -48,7 +48,7 @@ function filter_test(master::Spark.Master)
     count = Spark.count(master, filtered)
     val = Spark.lookup(master, filtered, 7)
     @assert count == 5
-    @assert val == false
+    @assert val == {}
 end
 
 function map_test(master::Spark.Master)
