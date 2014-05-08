@@ -69,8 +69,16 @@ function flat_map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     return true
 end
 
-# wide
+function group_by_key(master::Master, rdd::RDD)
+    partition_by(master, rdd, HashPartitioner()) # todo - use the result of this, not rdd
+    op = Transformation("group_by_key", Dict())
+    doop(master, {rdd}, op, HashPartitioner())
+end
+
 function group_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
+    partition = worker.rdds[old_rdd_id].partitions[part_id].data
+    append_merge(partition, newRDD.partitions[part_id].data)
     return true
 end
 
@@ -86,11 +94,11 @@ function union(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
 end
 
 # can have wide or narrow dependencies
-function join(master::Master, rddA::RDD, rddB::RDD, newPartitioner::Partitioner)
-    partition_by(master, rddA, newPartitioner)
-    partition_by(master, rddB, newPartitioner)
+function join(master::Master, rddA::RDD, rddB::RDD)
+    partition_by(master, rddA, HashPartitioner())
+    partition_by(master, rddB, HashPartitioner())
     op = Transformation("join", {"rddA" => rddA, "rddB" => rddB})
-    doop(master, {rddA, rddB}, op, newPartitioner)
+    doop(master, {rddA, rddB}, op, HashPartitioner())
 end
 
 # makes the assumption that RDDs are co-partitioned, if the partition exists
