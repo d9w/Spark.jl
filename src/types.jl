@@ -48,6 +48,14 @@ end
 type Action
     name::ASCIIString
     arguments::Dict
+
+    Action(name, arguments) = new(name, arguments)
+    function Action(args::Dict{String, Any})
+        x = new()
+        x.name = args["name"]
+        x.arguments = args["arguments"]
+        return x
+    end
 end
 
 type RDD
