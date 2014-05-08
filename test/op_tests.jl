@@ -55,7 +55,7 @@ function map_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
     mapped_rdd = Spark.map(master, rdd, "double_map")
-    @assert Spark.count(master, rdd) == Spark.count(master, partitioned_rdd)
+    @assert Spark.count(master, rdd) == Spark.count(master, mapped_rdd)
     for kv in collection
         values = Spark.lookup(master, mapped_rdd, kv[1])
         @assert 2*(kv[2][1]) == values[1]
@@ -65,8 +65,18 @@ end
 function group_by_key_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
+    println("collection:")
+    dump(collection)
     mapped_rdd = Spark.map(master, rdd, "one_map")
+    collection = Spark.collect(master, mapped_rdd)
+    println("mapped collection:")
+    dump(collection)
     grouped_rdd = Spark.group_by_key(master, mapped_rdd)
+    collection = Spark.collect(master, grouped_rdd)
+    println("grouped collection:")
+    dump(collection)
+    lookedup = Spark.lookup(master, grouped_rdd, 1)
+    dump(lookedup)
     @assert Spark.count(master, grouped_rdd) == 1
     @assert length(Spark.lookup(master, grouped_rdd, 1)) == 10
 end

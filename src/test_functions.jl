@@ -18,6 +18,7 @@ function test_map(key, value::Array)
     for v in value
         push!(new_kvs, (v, {key}))
     end
+    return new_kvs
 end
 
 function double_map(key, value::Array)
@@ -25,6 +26,7 @@ function double_map(key, value::Array)
     for v in value
         push!(new_kvs, (key, {2*v}))
     end
+    return new_kvs
 end
 
 function one_map(key, value::Array)
@@ -32,6 +34,7 @@ function one_map(key, value::Array)
     for v in value
         push!(new_kvs, (1, {v}))
     end
+    return new_kvs
 end
 
 function test_filter(key, value::Array)

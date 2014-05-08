@@ -64,7 +64,6 @@ function filter(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     func = args["function"]
     old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
     partition = worker.rdds[old_rdd_id].partitions[part_id].data
-    newRDD.partitions[part_id] = WorkerPartition(Dict{Any, Array{Any}}())
     newRDD.partitions[part_id].data = eval(Expr(:call, filter, symbol(func), partition))
     return true
 end
@@ -73,6 +72,9 @@ end
 
 function group_by_key(master::Master, rdd::RDD)
     newRDD = partition_by(master, rdd, HashPartitioner())
+    println("collected partition by group_by_key")
+    collection = collect(master, newRDD)
+    dump(collection)
     if newRDD == false
         return false
     end
@@ -83,7 +85,11 @@ end
 function group_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
     partition = worker.rdds[old_rdd_id].partitions[part_id].data
+    println("Worker ", worker.ID, " has part_id ", part_id, " and data:")
+    dump(partition)
     append_merge(partition, newRDD.partitions[part_id].data)
+    println("After merge, worker ", worker.ID, " has part_id ", part_id, " and data:")
+    dump(partition)
     return true
 end
 

@@ -136,6 +136,9 @@ function doop(worker::Worker, args::Dict)
     if !(rdd_id in keys(worker.rdds))
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
+    if !(part_id in keys(worker.rdds[rdd_id].partitions))
+        worker.rdds[rdd_id].partitions[part_id] = WorkerPartition(Dict{Any, Array{Any}}())
+    end
     result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
     return {:result => result}
 end
@@ -254,6 +257,12 @@ function recv_key(worker::Worker, args::Dict)
         # make the new partition with empty data
         rdd.partitions[partition_id] = WorkerPartition(Dict{Any, Array{Any}}())
     end
-    rdd.partitions[partition_id].data[key] = value
+    if key in keys(rdd.partitions[partition_id].data)
+        for v in value
+            push!(rdd.partitions[partition_id].data[key], v)
+        end
+    else
+        rdd.partitions[partition_id].data[key] = value
+    end
     return true
 end
