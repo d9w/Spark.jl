@@ -20,10 +20,11 @@ function main()
     # start master listener
     Spark.initserver(master)
     println("done initserver")
-    Spark.input(master, "RDDA.txt", "test_reader")
+    rdd = Spark.input(master, "RDDA.txt", "test_reader")
     println("done reading")
-    rdd = master.rdds[1]
-    Spark.partition_by(master, rdd, Spark.HashPartitioner())
+    partitioned_rdd = Spark.partition_by(master, rdd, Spark.HashPartitioner())
+    println("done partition_by")
+    println(Spark.count(master, partitioned_rdd))
 end
 
 main()
