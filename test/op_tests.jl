@@ -28,7 +28,6 @@ end
 function lookup_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     val = Spark.lookup(master, rdd, 3)
-    dump(val)
     @assert val == {3}
 end
 
@@ -65,18 +64,11 @@ end
 function group_by_key_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
-    println("collection:")
-    dump(collection)
     mapped_rdd = Spark.map(master, rdd, "one_map")
     collection = Spark.collect(master, mapped_rdd)
-    println("mapped collection:")
-    dump(collection)
     grouped_rdd = Spark.group_by_key(master, mapped_rdd)
     collection = Spark.collect(master, grouped_rdd)
-    println("grouped collection:")
-    dump(collection)
     lookedup = Spark.lookup(master, grouped_rdd, 1)
-    dump(lookedup)
     @assert Spark.count(master, grouped_rdd) == 1
     @assert length(Spark.lookup(master, grouped_rdd, 1)) == 10
 end
