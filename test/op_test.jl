@@ -71,4 +71,12 @@ function group_by_key_test(master::Master)
 end
 
 function join_test(master::Master)
+    rdd_a = Spark.input(master, "RDDA.txt", "int_reader")
+    rdd_b = Spark.input(master, "RDDA.txt", "int_reader")
+    joined_rdd = Spark.join(master, rdd_a, rdd_b)
+    joined_collection = Spark.collect(master, joined_rdd)
+    @assert length(joined_collection) == 10
+    for kv in joined_collection
+        @assert length(kv[2]) == 2
+    end
 end
