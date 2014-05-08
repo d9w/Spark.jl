@@ -70,9 +70,12 @@ function flat_map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
 end
 
 function group_by_key(master::Master, rdd::RDD)
-    partition_by(master, rdd, HashPartitioner()) # todo - use the result of this, not rdd
+    newRDD = partition_by(master, rdd, HashPartitioner())
+    if newRDD == false
+        return false
+    end
     op = Transformation("group_by_key", Dict())
-    doop(master, {rdd}, op, HashPartitioner())
+    doop(master, {newRDD}, op, HashPartitioner())
 end
 
 function group_by_key(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
@@ -95,20 +98,25 @@ end
 
 # can have wide or narrow dependencies
 function join(master::Master, rddA::RDD, rddB::RDD)
-    partition_by(master, rddA, HashPartitioner())
-    partition_by(master, rddB, HashPartitioner())
-    op = Transformation("join", {"rddA" => rddA, "rddB" => rddB})
-    doop(master, {rddA, rddB}, op, HashPartitioner())
+    newA = partition_by(master, rddA, HashPartitioner())
+    newB = partition_by(master, rddB, HashPartitioner())
+    if newA == false || newB == false
+        return false
+    end
+    op = Transformation("join", Dict())
+    doop(master, {newA, newB}, op, HashPartitioner())
 end
 
 # makes the assumption that RDDs are co-partitioned, if the partition exists
 function join(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    if args["rddA"].ID in keys(worker.rdds)
-        worker_rdd = worker.rdds[args["rddA"].ID]
+    id_a = collect(keys(newRDD.rdd.dependencies))[1]
+    id_b = collect(keys(newRDD.rdd.dependencies))[2]
+    if id_a in keys(worker.rdds)
+        worker_rdd = worker.rdds[id_a]
         append_merge(worker_rdd.partitions[part_id].data, newRDD.partitions[part_id].data)
     end
-    if args["rddB"].ID in keys(worker.rdds)
-        worker_rdd = worker.rdds[args["rddB"].ID]
+    if id_b in keys(worker.rdds)
+        worker_rdd = worker.rdds[id_b]
         append_merge(worker_rdd.partitions[part_id].data, newRDD.partitions[part_id].data)
     end
     return true
