@@ -24,7 +24,14 @@ function main()
     println("done reading")
     partitioned_rdd = Spark.partition_by(master, rdd, Spark.HashPartitioner())
     println("done partition_by")
-    println(Spark.count(master, partitioned_rdd))
+    count = Spark.count(master, partitioned_rdd)
+    collect = Spark.collect(master, partitioned_rdd)
+    println("Count: $count Collect:")
+    for v in collect
+        key = v[1]
+        value = v[2]
+        println("[$key => $value]")
+    end
 end
 
 main()
