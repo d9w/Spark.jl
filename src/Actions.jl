@@ -18,17 +18,17 @@ end
 # Collect all keys in the RDD
 function collect(master::Master, rdd::RDD)
     op = Action("collect", Dict())
-    results = {}
-    results = cat(1, results, doop(master, rdd, op))
-    return results
+    results = doop(master, rdd, op)
+    r = {}
+    for i in results
+        append!(r, i)
+    end
+    return r
 end
 
 function collect(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
-    results = {}
-    for key in keys(rdd.partitions[part_id].data)
-        push!(results, (key, rdd.partitions[part_id].data[key]))
-    end
-    return results
+    data = rdd.partitions[part_id].data
+    return {(k, data[k]) for k in keys(data)}
 end
 
 function reduce(worker::Worker, rdd::WorkerRDD, args::Dict{Any, Any})
@@ -39,15 +39,19 @@ end
 function lookup(master::Master, rdd::RDD, key::Any)
     op = Action("lookup", {"key" => key})
     results = doop(master, rdd, op) 
-    return results
+    for r in results
+        if length(r) == 1
+            return r
+        end
+    end
 end
 
 function lookup(worker::Worker, rdd::WorkerRDD, part_id::Int64, args::Dict)
-    #results = {}
-    #for key in keys(rdd.partitions[part_id].data)
-    #    if key == args["key"]
-    #        push!(results, (key, rdd.partitions[part_id].data[key]))
-    #    end
-    #end
-    #return results 
+    results = {}
+    for key in keys(rdd.partitions[part_id].data)
+        if key == args["key"]
+            push!(results, (key, rdd.partitions[part_id].data[key]))
+        end
+    end
+    return results 
 end

@@ -176,7 +176,6 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     for l = begin_line:end_line
         line::String = readline(stream)
         kv_pairs = eval(Expr(:call, symbol(reader), line))
-        println(kv_pairs)
         append_merge(kv_pairs, partition.data)
     end
 
