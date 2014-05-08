@@ -4,13 +4,59 @@
 
 import Base.collect
 
-# narrow
+
+# merge the dictionaries with append as the key conflict behavior
+function append_merge(source::Dict, dest::Dict)
+    for key in keys(source)
+        if key in keys(dest)
+            push!(dest[key], source[key])
+        else
+            dest[key] = {source[key]}
+        end
+    end
+end
+
+# merge a list of (k,{v}) tuples into a dict with append
+function append_merge(source::Array, dest::Dict)
+    for kv in source
+        if kv[1] in keys(dest)
+            push!(dest[kv[1]], kv[2])
+        else
+            dest[kv[1]] = kv[2]
+        end
+    end
+end
+
+# require that map function is of the form func(key::Any, value::Array{Any})
+function map(master::Master, rdd::RDD, map_func::ASCIIString)
+    op = Transformation("map", {"function" => map_func})
+    doop(master, {rdd}, op, NoPartitioner())
+end
+
+# assumes co-partitioning between new and old
 function map(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    map_func = args["function"]
+    old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
+    partition = worker.rdds[old_rdd_id].partitions[part_id].data
+    for key in keys(partition)
+        kv_pairs = eval(Expr(:call, symbol(map_func), key, partition[key]))
+        append_merge(kv_pairs, newRDD.partitions[part_id].data)
+    end
+
     return true
 end
 
-# narrow
+function filter(master::Master, rdd::RDD, filter_func::ASCIIString)
+    op = Transformation("filter", {"function" => filter_func})
+    doop(master, {rdd}, op, NoPartitioner())
+end
+
+# assumes co-partitioning between new and old
 function filter(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
+    func = args["function"]
+    old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
+    partition = worker.rdds[old_rdd_id].partitions[part_id].data
+    newRDD.partitions[part_id].data = filter(func, partition)
     return true
 end
 
@@ -43,26 +89,15 @@ function join(master::Master, rddA::RDD, rddB::RDD, newPartitioner::Partitioner)
     doop(master, {rddA, rddB}, op, newPartitioner)
 end
 
-# merge the dictionaries with append as the key conflict behavior
-function append_merge(source::Dict, dest::Dict)
-    for key in keys(source)
-        if key in keys(dest)
-            push!(dest[key], source[key])
-        else
-            dest[key] = {source[key]}
-        end
-    end
-end
-
 # makes the assumption that RDDs are co-partitioned, if the partition exists
 function join(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     if args["rddA"].ID in keys(worker.rdds)
         worker_rdd = worker.rdds[args["rddA"].ID]
-        append_merge(worker_rdd.partitions[part_id], newRDD.partitions[part_id])
+        append_merge(worker_rdd.partitions[part_id].data, newRDD.partitions[part_id].data)
     end
     if args["rddB"].ID in keys(worker.rdds)
         worker_rdd = worker.rdds[args["rddB"].ID]
-        append_merge(worker_rdd.partitions[part_id], newRDD.partitions[part_id])
+        append_merge(worker_rdd.partitions[part_id].data, newRDD.partitions[part_id].data)
     end
     return true
 end
@@ -137,13 +172,7 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     for l = begin_line:end_line
         line::String = readline(stream)
         kv_pairs = eval(Expr(:call, symbol(reader), line))
-        for kv in kv_pairs
-            if kv[2] in keys(partition.data)
-                push!(partition.data[kv[1]], kv[2])
-            else
-                partition.data[kv[1]] = {kv[2]}
-            end
-        end
+        append_merge(kv_pairs, partition.data)
     end
 
     #Adds partition to partition map

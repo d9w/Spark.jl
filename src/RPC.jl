@@ -118,12 +118,21 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
             return_bool = false
         end
     end
-    return return_bool
+    if return_bool
+        return new_RDD
+    end
+    return false # We need to do some retrying...
 end
 
-# call: do an action
+# call: do an action - the caller is responsible for combining return values
 function doop(master::Master, rdd::RDD, oper::Action)
-    allrpc(master, "doop", {:rdd => rdd, :oper => oper})
+    return_vals = {}
+    partitions = rdd.partitions
+    for part_id in keys(partitions)
+        result = master_rpc(master, partitions[part_id], "doop", {:rdd => rdd, :part_id => part_id, :oper => oper})
+        push!(return_vals, result["result"])
+    end
+    return return_vals
 end
 
 
