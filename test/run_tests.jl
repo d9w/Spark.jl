@@ -22,10 +22,10 @@ function main()
         println(test, " test running")
         try
             test(master)
-            println(test, " test passed")
+            print_with_color(:green, string(test, " test passed\n"))
         catch e
             println(e)
-            println(test, " test failed")
+            print_with_color(:red, string(test, " test failed\n"))
         end
     end
 
