@@ -2,16 +2,18 @@ using Spark
 
 # using master from setup.jl
 
-function input_test(master::Master)
+function input_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "test_reader")
     @assert rdd != false
     @assert length(keys(rdd.partitions)) == 3
 end
 
-function collect_test(master::Master)
+function collect_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
+    println(collection)
     for kv in collection
+        println(kv)
         @assert kv[1] <= 10
         @assert length(kv[2]) == 1
         @assert kv[2][1] <= 10
@@ -19,19 +21,20 @@ function collect_test(master::Master)
     @assert length(collection) == 10
 end
 
-function count_test(master::Master)
-    rdd = Spark.input(master, "RDDA.txt", "test_reader") 
+function count_test(master::Spark.Master)
+    rdd = Spark.input(master, "RDDA.txt", "test_reader")
     count = Spark.count(master, rdd)
     @assert count == 10
 end
 
-function lookup_test(master::Master)
-    rdd = Spark.input(master, "RDDA.txt", "direct_reader") 
+function lookup_test(master::Spark.Master)
+    rdd = Spark.input(master, "RDDA.txt", "direct_reader")
     val = Spark.lookup(master, rdd, "3")
-    @assert val == "3"
+    println(val)
+    @assert chomp(val) == "3"
 end
 
-function partition_by_test(master::Master)
+function partition_by_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
     partitioned_rdd = Spark.partition_by(master, rdd, Spark.HashPartitioner())
@@ -41,7 +44,7 @@ function partition_by_test(master::Master)
     end
 end
 
-function filter_test(master::Master)
+function filter_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     filtered = Spark.filter(master, rdd, "number_filter")
     count = Spark.count(master, filtered)
@@ -50,7 +53,7 @@ function filter_test(master::Master)
     @assert val == false
 end
 
-function map_test(master::Master)
+function map_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
     mapped_rdd = Spark.map(master, rdd, "double_map")
@@ -61,7 +64,7 @@ function map_test(master::Master)
     end
 end
 
-function group_by_key_test(master::Master)
+function group_by_key_test(master::Spark.Master)
     rdd = Spark.input(master, "RDDA.txt", "int_reader")
     collection = Spark.collect(master, rdd)
     mapped_rdd = Spark.map(master, rdd, "one_map")
@@ -70,7 +73,7 @@ function group_by_key_test(master::Master)
     @assert length(Spark.lookup(master, grouped_rdd, 1)) == 10
 end
 
-function join_test(master::Master)
+function join_test(master::Spark.Master)
     rdd_a = Spark.input(master, "RDDA.txt", "int_reader")
     rdd_b = Spark.input(master, "RDDA.txt", "int_reader")
     joined_rdd = Spark.join(master, rdd_a, rdd_b)
