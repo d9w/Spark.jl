@@ -52,17 +52,19 @@ type RDD
     RDD(ID,partitions,dependencies,operation,partitioner) = new(ID,partitions,dependencies,operation,partitioner)
     function RDD(args::Dict{String, Any})
         # Kind of awful, but needed I think to convert JSON dict -> type RDD
+        println(args)
         x = new()
         x.ID = args["ID"]
         x.partitions = Dict{Int64, WorkerRef}()
         for p in keys(args["partitions"])
             x.partitions[int(p)] = WorkerRef(args["partitions"][p])
         end
+        println("partitions went fine")
         x.dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
         for p in keys(args["dependencies"])
             x.dependencies[int(p)] = Dict{Int64, WorkerRef}()
-            for q in keys(args["partitions"][p])
-                x.dependencies[int(p)][int(q)] = WorkerRef(args["partitions"][p][q])
+            for q in keys(args["dependencies"][p])
+                x.dependencies[int(p)][int(q)] = WorkerRef(args["dependencies"][p][q])
             end
         end
         x.operation = Transformation(args["operation"])

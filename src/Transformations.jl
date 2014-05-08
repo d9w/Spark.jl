@@ -68,7 +68,7 @@ function partition_by(master::Master, rdd::RDD, partitioner::Partitioner)
 end
 
 function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    println("worker $worker - doing partition_by")
+    println("worker - doing partition_by")
     partitioner = args["partitioner"]
     old_rdd_id = keys(newRDD.rdd.dependencies)[1]
     local_rdd_copy = worker.rdds[old_rdd_id]
