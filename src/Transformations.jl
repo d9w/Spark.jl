@@ -179,6 +179,7 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
         append_merge(kv_pairs, partition.data)
     end
 
+    println("worker ", worker.ID, " input data ", partition.data)
     #Adds partition to partition map
     newRDD.partitions[part_id] = partition
 end

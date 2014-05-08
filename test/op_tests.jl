@@ -26,10 +26,10 @@ function count_test(master::Spark.Master)
 end
 
 function lookup_test(master::Spark.Master)
-    rdd = Spark.input(master, "RDDA.txt", "direct_reader")
-    val = Spark.lookup(master, rdd, "3")
+    rdd = Spark.input(master, "RDDA.txt", "int_reader")
+    val = Spark.lookup(master, rdd, 3)
     println(val)
-    @assert chomp(val) == "3"
+    @assert val == {3}
 end
 
 function partition_by_test(master::Spark.Master)
