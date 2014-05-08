@@ -33,7 +33,7 @@ function initserver(master::Master)
     println("Starting server")
     @async while true
         sock = accept(server)
-        while true
+        @async while true
             try
                 line = readline(sock)
                 response = handle(master, line)
