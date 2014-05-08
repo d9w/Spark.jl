@@ -130,7 +130,9 @@ function doop(master::Master, rdd::RDD, oper::Action)
     partitions = rdd.partitions
     for part_id in keys(partitions)
         result = master_rpc(master, partitions[part_id], "doop", {:rdd => rdd, :part_id => part_id, :oper => oper})
-        push!(return_vals, result["result"])
+        if length(result) > 0
+            push!(return_vals, result["result"])
+        end
     end
     return return_vals
 end
