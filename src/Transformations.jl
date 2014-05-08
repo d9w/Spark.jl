@@ -109,10 +109,6 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
     return true
 end
 
-function test_reader(line::String)
-    return {(hash(line), chomp(line))}
-end
-
 function input(master::Master, filename::ASCIIString, reader::ASCIIString)
     op = Transformation("input", {"filename" => filename, "reader" => reader})
     doop(master, {}, op, NoPartitioner())
