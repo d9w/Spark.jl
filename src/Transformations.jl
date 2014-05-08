@@ -2,6 +2,8 @@
 ## Transformations ##
 #####################
 
+import Base.collect
+
 # narrow
 function map(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
     return true
@@ -62,22 +64,21 @@ function sort(worker::Worker, newRDD::WorkerRDD, args::Dict{Any, Any})
 end
 
 function partition_by(master::Master, rdd::RDD, partitioner::Partitioner)
-    println("master - doing partition_by")
     op = Transformation("partition_by", {"partitioner" => partitioner})
     doop(master, {rdd}, op, partitioner)
 end
 
 function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
-    println("worker - doing partition_by")
-    partitioner = args["partitioner"]
-    old_rdd_id = keys(newRDD.rdd.dependencies)[1]
+    partitioner = mkPartitioner(args["partitioner"])
+    old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
     local_rdd_copy = worker.rdds[old_rdd_id]
-    for partition in local_rdd_copy.partitions
+    for pid in keys(local_rdd_copy.partitions)
+        partition = local_rdd_copy.partitions[pid]
         for key in keys(partition.data)
             new_partitions = assign(partitioner, newRDD.rdd, key)
             for new_partition in new_partitions
                 new_worker = newRDD.rdd.partitions[new_partition]
-                send_key(worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
+                send_key(worker, new_worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
             end
         end
     end

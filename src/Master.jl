@@ -24,6 +24,7 @@ function load(master::Master, configfile)
         master.workers = cat(1, master.workers, [wf])
         master.sockets[wf] = socket
     end
+    identify(master)
 end
 
 # Set up the local RPC server for worker->master RDD requests
@@ -35,8 +36,7 @@ function initserver(master::Master)
         while true
             try
                 line = readline(sock)
-                parsed = JSON.parse(line)
-                response = json(handle(parsed))
+                response = handle(master, line)
                 println(sock, response)
             catch e
                 showerror(STDERR, e)

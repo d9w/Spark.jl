@@ -1,11 +1,19 @@
 abstract Partitioner
 
 type HashPartitioner <: Partitioner
-#    partition_number::Int
-#    total_partitions::Int
+    name::ASCIIString
+    HashPartitioner(n) = new(n)
+    HashPartitioner() = HashPartitioner("HashPartitioner")
 end
 
 type NoPartitioner <: Partitioner
+    name::ASCIIString
+    NoPartitioner(n) = new(n)
+    NoPartitioner() = NoPartitioner("NoPartitioner")
+end
+
+function mkPartitioner(args::Dict{String, Any})
+    return eval(Expr(:call, symbol(args["name"])))
 end
 
 type WorkerRef # for the master
@@ -52,14 +60,12 @@ type RDD
     RDD(ID,partitions,dependencies,operation,partitioner) = new(ID,partitions,dependencies,operation,partitioner)
     function RDD(args::Dict{String, Any})
         # Kind of awful, but needed I think to convert JSON dict -> type RDD
-        println(args)
         x = new()
         x.ID = args["ID"]
         x.partitions = Dict{Int64, WorkerRef}()
         for p in keys(args["partitions"])
             x.partitions[int(p)] = WorkerRef(args["partitions"][p])
         end
-        println("partitions went fine")
         x.dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
         for p in keys(args["dependencies"])
             x.dependencies[int(p)] = Dict{Int64, WorkerRef}()
@@ -68,7 +74,7 @@ type RDD
             end
         end
         x.operation = Transformation(args["operation"])
-        x.partitioner = HashPartitioner() # XXX change this for other partitioners
+        x.partitioner = mkPartitioner(args["partitioner"])
         return x
     end
 end
@@ -80,6 +86,14 @@ end
 type WorkerRDD
     partitions::Dict{Int64, WorkerPartition}
     rdd::RDD
+    
+    WorkerRDD(partitions, rdd) = new(partitions, rdd)
+    function WorkerRDD(args::Dict{String, Any})
+        x = new()
+        x.partitions = Dict{Int64, WorkerPartition}()
+        x.rdd = RDD(args["rdd"])
+        return x
+    end
 end
 
 type Worker # for the worker

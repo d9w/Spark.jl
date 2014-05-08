@@ -6,7 +6,7 @@ function start(worker::Worker)
     println("Starting worker")
     while worker.active
         sock = accept(server)
-        while worker.active
+        @async while worker.active
             try
                 line = readline(sock)
                 result = handle(worker, line)

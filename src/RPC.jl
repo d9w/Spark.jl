@@ -72,13 +72,13 @@ end
 # call: tell the workers the master hostname and port
 function identify(master::Master)
     for w = 1:length(master.workers)
-        master_rpc(master, w, "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
+        master_rpc(master, master.workers[w], "identify", {:hostname => master.hostname, :port => master.port, :ID => w})
     end
 end
 
 # handler: set the master hostname and port on the worker
 function identify(worker::Worker, args::Dict)
-    worker.id = args["ID"]
+    worker.ID = args["ID"]
     worker.masterhostname=args["hostname"]
     worker.masterport=args["port"]
     return true
@@ -109,8 +109,6 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
         dependencies[rdd.ID] = rdd.partitions
     end
 
-    println("dependencies calculated")
-
     new_RDD = RDD(ID, partitions, dependencies, oper, part)
     master.rdds[ID] = new_RDD
     return_bool = true
@@ -131,7 +129,6 @@ end
 
 # handler: do an action or transformation on a worker
 function doop(worker::Worker, args::Dict)
-    println("worker - receiving RPC")
     oper = Transformation(args["oper"])
     rdd = RDD(args["rdd"])
     rdd_id = rdd.ID
@@ -141,7 +138,6 @@ function doop(worker::Worker, args::Dict)
         worker.rdds[rdd_id] = WorkerRDD(Dict{Int64, WorkerPartition}(), rdd)
     end
     result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
-    println("worker - doing result")
     return {:result => result}
 end
 
@@ -154,7 +150,8 @@ function getRDD(worker::Worker, ID::Int64)
     master = connect(worker.masterhostname, worker.masterport)
     println(master, json({:call => "getRDD", :args => {:id => ID}}))
     result = readline(master)
-    return JSON.parse(result)["rdd"]
+    parsed = JSON.parse(result)["rdd"]
+    return WorkerRDD(parsed)
 end
 
 # handler: return RDD info from master to worker
@@ -244,8 +241,8 @@ function get_key_data(worker::Worker, args::Dict)
 end
 
 # Send key
-function send_key(worker::Worker, rdd_id::Int64, partition_id::Int64, key::Any, value::Array{Any})
-    worker_rpc(worker, "recv_key", {:rdd_id => rdd_id, :partition_id => partition_id, :key => key, :value => value})
+function send_key(oldWorker::Worker, targetWorker::WorkerRef, rdd_id::Int64, partition_id::Int64, key::Any, value::Array{Any})
+    worker_rpc(oldWorker, targetWorker, "recv_key", {:rdd_id => rdd_id, :partition_id => partition_id, :key => key, :value => value})
 end
 
 function recv_key(worker::Worker, args::Dict)
@@ -254,5 +251,10 @@ function recv_key(worker::Worker, args::Dict)
     partition_id = args["partition_id"]
     value = args["value"]
     rdd = fetch_worker_rdd(worker, rdd_id)
+    if !(partition_id in keys(rdd.partitions))
+        # make the new partition with empty data
+        rdd.partitions[partition_id] = WorkerPartition(Dict{Any, Array{Any}}())
+    end
     rdd.partitions[partition_id].data[key] = value
+    return true
 end
