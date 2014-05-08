@@ -11,16 +11,14 @@ end
 type WorkerRef # for the master
     hostname::ASCIIString
     port::Int64
-    socket::Any
     active::Bool
 
-    WorkerRef(hostname, port, socket, active) = new(hostname, port, socket, active)
+    WorkerRef(hostname, port, active) = new(hostname, port, active)
     function WorkerRef(args::Dict{String, Any})
         # JSON dict -> WorkerRef
         x = new()
         x.hostname = args["hostname"]
         x.port = args["port"]
-        x.socket = None
         x.active = false
         return x
     end
@@ -54,17 +52,19 @@ type RDD
     RDD(ID,partitions,dependencies,operation,partitioner) = new(ID,partitions,dependencies,operation,partitioner)
     function RDD(args::Dict{String, Any})
         # Kind of awful, but needed I think to convert JSON dict -> type RDD
+        println(args)
         x = new()
         x.ID = args["ID"]
         x.partitions = Dict{Int64, WorkerRef}()
         for p in keys(args["partitions"])
             x.partitions[int(p)] = WorkerRef(args["partitions"][p])
         end
+        println("partitions went fine")
         x.dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
         for p in keys(args["dependencies"])
             x.dependencies[int(p)] = Dict{Int64, WorkerRef}()
-            for q in keys(args["partitions"][p])
-                x.dependencies[int(p)][int(q)] = WorkerRef(args["partitions"][p][q])
+            for q in keys(args["dependencies"][p])
+                x.dependencies[int(p)][int(q)] = WorkerRef(args["dependencies"][p][q])
             end
         end
         x.operation = Transformation(args["operation"])
@@ -93,12 +93,15 @@ type Worker # for the worker
 
     rdds::Dict{Int64, WorkerRDD}
 
+    sockets::Dict{WorkerRef, Any}
+    
     function Worker(hostname::ASCIIString, port::Int64)
         x = new()
         x.hostname = hostname
         x.port = port
         x.rdds = Dict{Int64, WorkerRDD}()
         x.active = true
+        x.sockets = Dict{WorkerRef, Any}()
         return x
     end
 end
@@ -109,6 +112,7 @@ type Master
 
     rdds::Dict{Int64, RDD}
     workers::Array{WorkerRef}
+    sockets::Dict{WorkerRef, Any}
 
     function Master(hostname::ASCIIString, port::Int64)
         x = new()
@@ -116,6 +120,7 @@ type Master
         x.port = port
         x.rdds = Dict{Int64, RDD}()
         x.workers = {}
+        x.sockets = Dict{WorkerRef, Any}()
         return x
     end
 end
