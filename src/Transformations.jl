@@ -9,9 +9,11 @@ import Base.collect
 function append_merge(source::Dict, dest::Dict)
     for key in keys(source)
         if key in keys(dest)
-            push!(dest[key], source[key])
+            for val in source[key]
+                push!(dest[key], val)
+            end
         else
-            dest[key] = {source[key]}
+            dest[key] = source[key]
         end
     end
 end
@@ -20,7 +22,9 @@ end
 function append_merge(source::Array, dest::Dict)
     for kv in source
         if kv[1] in keys(dest)
-            push!(dest[kv[1]], kv[2])
+            for val in kv[2]
+                push!(dest[kv[1]], val)
+            end
         else
             dest[kv[1]] = kv[2]
         end
@@ -172,6 +176,7 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     for l = begin_line:end_line
         line::String = readline(stream)
         kv_pairs = eval(Expr(:call, symbol(reader), line))
+        println(kv_pairs)
         append_merge(kv_pairs, partition.data)
     end
 
