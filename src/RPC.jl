@@ -200,7 +200,7 @@ function fetch_worker_rdd(worker::Worker, rdd_int::Int64)
 end
 
 # Returns tuple (boolean, data) where the first element should tell whether the operation was
-# successful. data contains all the key in the remote partition that belong in the partition
+# successful. data contains all the keys in the remote partition that belong in the partition
 function get_keys(worker::Worker, rdd_int::Int64, partition_id::Int64)
     args = {:rdd_int => rdd_int, :partition_id => partition_id}
     rdd = fetch_worker_rdd(worker, rdd_int)
@@ -229,7 +229,7 @@ function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
             return_bool = false
         end
     end
-    return return_bool #TODO: should actually return the data?
+    return return_bool #TODO should actually return the data?
 end
 
 # Returns key data for a particular (rdd, partition, key)
