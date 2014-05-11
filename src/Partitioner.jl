@@ -12,11 +12,24 @@ function create(p::NoPartitioner, master::Master)
     return partitions
 end
 
+function create(p::NoPartitioner, master::Master, n::Int64)
+    partitions = Dict{Int64, WorkerRef}()
+    n_workers = length(master.workers) # topology will change if workers list changes,
+    for i in 1:n                       # no more guarantee for co-partitioning
+        partitions[i] = master.workers[(i%n_workers)+1]
+    end
+    return partitions
+end
+
 function assign(p::NoPartitioner, rdd::RDD, key::Any)
     return keys(rdd.partitions)
 end
 
 function create(p::HashPartitioner, master::Master)
+    return create(NoPartitioner(), master)
+end
+
+function create(p::HashPartitioner, master::Master, n::Int64)
     return create(NoPartitioner(), master)
 end
 

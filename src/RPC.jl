@@ -23,7 +23,6 @@ function master_rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::
     m = {:call => func, :args => args}
     encoded = json(m)
     try
-        @assert worker.active
         println(socket, encoded)
         result = JSON.parse(readline(socket))
         return result["result"]
@@ -131,10 +130,24 @@ end
 function doop(master::Master, rdds::Array, oper::Transformation, part::Partitioner)
     # create new RDD fields
     ID::Int64 = length(master.rdds) + 1
-    partitions = create(part, master)
     dependencies = Dict{Int64, Dict{Int64, WorkerRef}}()
+    part_length_same = true
+    part_length = 0
+    if length(rdds) > 0
+        part_length = length(rdds[1].partitions)
+    else
+        part_length_same = false
+    end
     for rdd in rdds
         dependencies[rdd.ID] = rdd.partitions
+        if part_length != length(rdd.partitions)
+            part_length_same = false
+        end
+    end
+    if part_length_same
+        partitions = create(part, master, part_length)
+    else
+        partitions = create(part, master)
     end
 
     # create RDD and add to master.rdds
