@@ -59,3 +59,45 @@ function handle(master::Master, line::ASCIIString)
     end
     return r
 end
+
+#recovers given partition
+function recover_rdd(master::Master, rdd_id::Int64, partition_id::Int64)
+    
+    #Check if rdd comes directly from disk. If so, recover partition and return
+    if length(master.rdds[rdd_id].dependencies) == 0
+        #recover from file
+        return
+    end
+
+    lost_partitions::Array{(Int64, Int64)} = Array((Int64, Int64), 0)
+    #finds lost predecessors
+    for rdd in master.rdds[rdd_id].dependencies
+        for partition in rdd[2]
+            if !partition[2].active
+                append!(lost_partitions, (rdd[1], partition[1]))
+            end
+        end
+    end
+    
+    if length(lost_partitions) == 0
+        return
+    else
+        for partition in lost_partitions
+            recover_rdd(master, partition[1], partition[2])
+        end
+        #do actual recovering
+    end
+end
+
+#recovers all lost partitions of the given rdd
+function recover(master::Master, rdd_id::Int64)
+    lost_partitions::Array{Int64} = Array(Int64, 0)
+    for worker in master.rdds[rdd_id].partitions
+        if !worker[2].active
+            append!(lost_partitions, worker[1])
+    end
+
+    for partition_id in lost_partitions
+        recover_partition(master, rdd_id, partition_id)
+    end
+end
