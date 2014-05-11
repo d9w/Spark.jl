@@ -83,18 +83,3 @@ function join_test(master::Spark.Master)
         @assert length(kv[2]) == 2
     end
 end
-
-function recover_test(master::Spark.Master)
-    rdd = Spark.input(master, "RDDA.txt", "int_reader")
-    master.workers[1].active = false
-    println("here's the worker")
-    dump(master.workers[1])
-    println("=============STARTING MAPPED RDD===================")
-    mapped_rdd = Spark.map(master, rdd, "double_map")
-    println("mapped RDD here")
-    dump(mapped_rdd)
-    Spark.recover(master, rdd.ID)
-    mapped_rdd = Spark.map(master, rdd, "double_map")
-    mapped_collection = Spark.collect(master, mapped_rdd)
-    @assert length(mapped_collection) == 10
-end

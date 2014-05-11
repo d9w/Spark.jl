@@ -22,18 +22,12 @@ function master_rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::
     socket = master.sockets[worker]
     m = {:call => func, :args => args}
     encoded = json(m)
-    println("starting the try/catch")
     try
         @assert worker.active
         println(socket, encoded)
-        println("wrote to the socket")
-        dump(worker)
         result = JSON.parse(readline(socket))
-        println("read from the socket")
         return result["result"]
     catch e
-        # TODO reconstruct parts of the RDD that were on this failing worker
-        println("caught exception ", e)
         worker.active = false
         master.sockets[worker] = None
         return false
@@ -53,7 +47,6 @@ function worker_rpc(wk::Worker, wr::WorkerRef, func::ASCIIString, args::Dict)
         result = JSON.parse(readline(socket))
         return result["result"]
     catch e
-        # TODO reconstruct parts of the RDD that were on this failing worker
         wr.active = false
         wk.sockets[wr] = None
         return false
@@ -90,7 +83,7 @@ function identify(worker::Worker, args::Dict)
 end
 
 # returns a random active worker
-function find_active_workers(master::Master)
+function find_active_worker(master::Master)
     active_workers = shuffle(master.workers)
     for worker in active_workers
         if worker.active == true
@@ -103,7 +96,7 @@ end
 function recover_part(master::Master, rdd::RDD, lost_part::Int64)
     partitions = rdd.partitions
     # get a new active worker
-    worker = find_active_worker()
+    worker = find_active_worker(master)
     rdd.partitions[lost_part] = worker
     return_bool = true
     is_partition_by = false
@@ -130,7 +123,7 @@ end
 
 # handler for update_rdd
 function update_rdd(worker::Worker, args::Dict)
-    rdd = args["rdd"]
+    rdd = RDD(args["rdd"])
     worker.rdds[rdd.ID].rdd = rdd
 end
 
@@ -150,14 +143,8 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
 
     # send doop rcp to all workers on new RDD
     return_bool = true
-    println("Workers from doop view")
-    dump(master.workers)
-    println("Partitions from doop view")
-    dump(partitions)
     for part_id in keys(partitions)
         result = master_rpc(master, partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
-        println("Result looks like")
-        dump(result)
         if result["result"] == false
             return_bool = false
         end
@@ -165,7 +152,7 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
     if return_bool
         return new_RDD
     end
-    return false #TODO retry
+    return false
 end
 
 # call: do an action - the caller is responsible for combining return values
@@ -199,7 +186,6 @@ function doop(worker::Worker, args::Dict)
         result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
         return {:result => result}
     catch
-        println("HERE return false")
         return {:result => false}
     end
 end
@@ -238,7 +224,7 @@ end
 # Worker->Worker RPC: coworker functions for sharing data
 ##############################
 
-function send_coworker(coworker::Array, rdd::RDD) # TODO etc.
+function send_coworker(coworker::Array, rdd::RDD)
     coworker = connect(coworker[0], coworker[1])
     args = {"rdd" => rdd}
     println(coworker, json({:call => "recv_send_coworker", :args => args}))
@@ -291,7 +277,7 @@ function get_key_data(worker::Worker, rdd_int::Int64, key::Any)
             return_bool = false
         end
     end
-    return return_bool #TODO should actually return the data?
+    return return_bool
 end
 
 # Returns key data for a particular (rdd, partition, key)

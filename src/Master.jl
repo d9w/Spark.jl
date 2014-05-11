@@ -62,8 +62,7 @@ end
 
 #recovers given partition
 function recover_partition(master::Master, rdd_id::Int64, partition_id::Int64)
-    println("recovering")
-    
+
     #Check if rdd comes directly from disk. If so, recover partition and return
     if length(master.rdds[rdd_id].dependencies) == 0
         recover_part(master, master.rdds[rdd_id], partition_id)
@@ -75,11 +74,11 @@ function recover_partition(master::Master, rdd_id::Int64, partition_id::Int64)
     for rdd in master.rdds[rdd_id].dependencies
         for partition in rdd[2]
             if !partition[2].active
-                append!(lost_partitions, (rdd[1], partition[1]))
+                push!(lost_partitions, (rdd[1], partition[1]))
             end
         end
     end
-    
+
     if length(lost_partitions) == 0
         return
     else
@@ -95,11 +94,12 @@ function recover(master::Master, rdd_id::Int64)
     lost_partitions::Array{Int64} = Array(Int64, 0)
     for worker in master.rdds[rdd_id].partitions
         if !worker[2].active
-            append!(lost_partitions, worker[1])
+            push!(lost_partitions, worker[1])
         end
     end
 
     for partition_id in lost_partitions
         recover_partition(master, rdd_id, partition_id)
     end
+    return partition_by(master, master.rdds[rdd_id], HashPartitioner())
 end

@@ -1,6 +1,7 @@
 using Spark
 
 include("op_tests.jl")
+include("fault_tests.jl")
 
 function start_worker(port::Int64)
     worker = Spark.Worker("127.0.0.1", port)
@@ -39,8 +40,10 @@ function main()
 #    run_test(map_test)
 #    run_test(group_by_key_test)
 #    run_test(join_test)
-     recover_test(master)
-#    run_test(recover_test)
+
+    # fault tests
+    run_test(basic_disc_fault)
+    run_test(join_disc_fault)
 end
 
 main()
