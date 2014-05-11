@@ -61,7 +61,7 @@ function handle(master::Master, line::ASCIIString)
 end
 
 #recovers given partition
-function recover_rdd(master::Master, rdd_id::Int64, partition_id::Int64)
+function recover_partition(master::Master, rdd_id::Int64, partition_id::Int64)
     println("recovering")
     
     #Check if rdd comes directly from disk. If so, recover partition and return
@@ -84,7 +84,7 @@ function recover_rdd(master::Master, rdd_id::Int64, partition_id::Int64)
         return
     else
         for partition in lost_partitions
-            recover_rdd(master, partition[1], partition[2])
+            recover_partition(master, partition[1], partition[2])
         end
         recover_part(master, master.rdds[rdd_id], partition_id)
     end
