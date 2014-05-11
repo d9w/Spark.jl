@@ -65,7 +65,7 @@ function recover_rdd(master::Master, rdd_id::Int64, partition_id::Int64)
     
     #Check if rdd comes directly from disk. If so, recover partition and return
     if length(master.rdds[rdd_id].dependencies) == 0
-        #recover from file
+        recover_part(master, master.rdds[rdd_id], partition_id)
         return
     end
 
@@ -85,7 +85,7 @@ function recover_rdd(master::Master, rdd_id::Int64, partition_id::Int64)
         for partition in lost_partitions
             recover_rdd(master, partition[1], partition[2])
         end
-        #do actual recovering
+        recover_part(master, master.rdds[rdd_id], partition_id)
     end
 end
 

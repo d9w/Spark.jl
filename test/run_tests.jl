@@ -39,7 +39,7 @@ function main()
     run_test(map_test)
     run_test(group_by_key_test)
     run_test(join_test)
-
+    run_test(recover_test)
 end
 
 main()
