@@ -22,12 +22,18 @@ function master_rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::
     socket = master.sockets[worker]
     m = {:call => func, :args => args}
     encoded = json(m)
+    println("starting the try/catch")
     try
+        @assert worker.active
         println(socket, encoded)
+        println("wrote to the socket")
+        dump(worker)
         result = JSON.parse(readline(socket))
+        println("read from the socket")
         return result["result"]
     catch e
         # TODO reconstruct parts of the RDD that were on this failing worker
+        println("caught exception ", e)
         worker.active = false
         master.sockets[worker] = None
         return false
@@ -144,9 +150,15 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
 
     # send doop rcp to all workers on new RDD
     return_bool = true
+    println("Workers from doop view")
+    dump(master.workers)
+    println("Partitions from doop view")
+    dump(partitions)
     for part_id in keys(partitions)
         result = master_rpc(master, partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
-        if result == false
+        println("Result looks like")
+        dump(result)
+        if result["result"] == false
             return_bool = false
         end
     end
@@ -183,8 +195,13 @@ function doop(worker::Worker, args::Dict)
     if !(part_id in keys(worker.rdds[rdd_id].partitions))
         worker.rdds[rdd_id].partitions[part_id] = WorkerPartition(Dict{Any, Array{Any}}())
     end
-    result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
-    return {:result => result}
+    try
+        result = eval(Expr(:call, symbol(oper.name), worker, worker.rdds[rdd_id], part_id, oper.arguments))
+        return {:result => result}
+    catch
+        println("HERE return false")
+        return {:result => false}
+    end
 end
 
 ##############################

@@ -30,16 +30,17 @@ function main()
     end
 
     # operation tests
-    run_test(input_test)
-    run_test(collect_test)
-    run_test(count_test)
-    run_test(lookup_test)
-    run_test(partition_by_test)
-    run_test(filter_test)
-    run_test(map_test)
-    run_test(group_by_key_test)
-    run_test(join_test)
-    run_test(recover_test)
+#    run_test(input_test)
+#    run_test(collect_test)
+#    run_test(count_test)
+#    run_test(lookup_test)
+#    run_test(partition_by_test)
+#    run_test(filter_test)
+#    run_test(map_test)
+#    run_test(group_by_key_test)
+#    run_test(join_test)
+     recover_test(master)
+#    run_test(recover_test)
 end
 
 main()
