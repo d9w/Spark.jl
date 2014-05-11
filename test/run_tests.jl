@@ -1,7 +1,21 @@
 using Spark
+using ArgParse
 
 include("op_tests.jl")
 include("fault_tests.jl")
+
+function parse_cli()
+    s = ArgParseSettings("run_tests.jl")
+
+    @add_arg_table s begin
+        "tests"
+            help = "Names of test, 'operation', 'fault', or 'all'"
+            arg_type = ASCIIString
+            default = "all"
+    end
+
+    return parse_args(s)
+end
 
 function start_worker(port::Int64)
     worker = Spark.Worker("127.0.0.1", port)
@@ -19,10 +33,10 @@ function main()
     # start master listener
     Spark.initserver(master)
 
-    function run_test(test::Function)
+    function run_test(test::ASCIIString)
         println(test, " test running")
         try
-            test(master)
+            eval(Expr(:call, symbol(test), master))
             print_with_color(:green, string(test, " test passed\n"))
         catch e
             println(e)
@@ -30,20 +44,26 @@ function main()
         end
     end
 
-    # operation tests
-#    run_test(input_test)
-#    run_test(collect_test)
-#    run_test(count_test)
-#    run_test(lookup_test)
-#    run_test(partition_by_test)
-#    run_test(filter_test)
-#    run_test(map_test)
-#    run_test(group_by_key_test)
-#    run_test(join_test)
+    args = parse_cli()
+    test = args["tests"]
+    op_tests = {"input_test", "collect_test", "count_test", "lookup_test","partition_by_test", "filter_test", "map_test", "group_by_key_test", "join_test"}
+    fault_tests = {"basic_disc_fault", "join_disc_fault"}
 
-    # fault tests
-    run_test(basic_disc_fault)
-    run_test(join_disc_fault)
+    tests = {}
+    if test == "operation"
+        tests = cat(1, tests, op_tests)
+    elseif test == "fault"
+        tests = cat(1, tests, fault_tests)
+    elseif test == "all"
+        tests = cat(1, tests, op_tests)
+        tests = cat(1, tests, fault_tests)
+    else
+        tests = cat(1, tests, test)
+    end
+
+    for t in tests
+        run_test(t)
+    end
 end
 
 main()
