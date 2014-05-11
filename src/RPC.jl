@@ -78,9 +78,42 @@ end
 # handler: set the master hostname and port on the worker
 function identify(worker::Worker, args::Dict)
     worker.ID = args["ID"]
-    worker.masterhostname=args["hostname"]
-    worker.masterport=args["port"]
+    worker.masterhostname = args["hostname"]
+    worker.masterport = args["port"]
     return true
+end
+
+# returns a random active worker
+function find_active_workers(master::Master)
+    active_workers = shuffle(master.workers)
+    for worker in active_workers
+        if worker.active == true
+            return worker
+        end
+    end
+end
+
+# works for all narrow operations (including second part of join and group_by_key)
+function recover_part(master::Master, rdd::RDD, lost_part::Int64)
+    partitions = rdd.partitions
+    # get a new active worker
+    worker = find_active_worker()
+    rdd.partitions[lost_part] = worker
+    for part_id in keys(partitions)
+        if part_id == lost_part
+            # do transformation
+            return master_rpc(master, worker, "doop", {:rdd => rdd, :part_id => part_id, :oper => rdd.operation})
+        else
+            # update rdd info
+            return master_rpc(master, rdd.partitions[part_id], "update_rdd", {:rdd => rdd})
+        end
+    end
+end
+
+# handler for update_rdd
+function update_rdd(worker::Worker, args::Dict)
+    rdd = args["rdd"]
+    worker.rdds[rdd.ID].rdd = rdd
 end
 
 # call: do a transformation (do is a keyword, using "doop")
@@ -169,7 +202,7 @@ end
 
 # handler: set the worker active flag
 function ping(master::Master)
-    master.Workers[args["id"]].active = true
+    master.workers[args["id"]].active = true
 end
 
 ##############################

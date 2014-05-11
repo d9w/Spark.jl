@@ -31,7 +31,7 @@ function range_partitioner(master::Master, rdd::RDD)
     sort!(rdd_values)
     partitions::Array{Partition} = Array(Partition, 0)
     num_partitions = 0
-    for worker in master.Workers
+    for worker in master.workers
         if worker.active
             num_partitions += 1
         end

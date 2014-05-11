@@ -94,7 +94,7 @@ end
 type WorkerRDD
     partitions::Dict{Int64, WorkerPartition}
     rdd::RDD
-    
+
     WorkerRDD(partitions, rdd) = new(partitions, rdd)
     function WorkerRDD(args::Dict{String, Any})
         x = new()
