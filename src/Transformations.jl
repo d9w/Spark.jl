@@ -140,8 +140,10 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
         for key in keys(partition.data)
             new_partitions = assign(partitioner, newRDD.rdd, key)
             for new_partition in new_partitions
-                new_worker = newRDD.rdd.partitions[new_partition]
-                send_key(worker, new_worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
+                if !("dest_partition" in collect(keys(args))) || new_partition == args["dest_partition"]
+                    new_worker = newRDD.rdd.partitions[new_partition]
+                    send_key(worker, new_worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
+                end
             end
         end
     end

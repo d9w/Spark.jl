@@ -99,15 +99,27 @@ function recover_part(master::Master, rdd::RDD, lost_part::Int64)
     # get a new active worker
     worker = find_active_worker()
     rdd.partitions[lost_part] = worker
+    return_bool = true
+    is_partition_by = false
+    # partition_by is the only wide dependency, do it on all workers
+    if rdd.operation.name == "partition_by"
+        rdd.operation.args["dest_partition"] = lost_part
+        is_partition_by = true
+    end
     for part_id in keys(partitions)
-        if part_id == lost_part
-            # do transformation
-            return master_rpc(master, worker, "doop", {:rdd => rdd, :part_id => part_id, :oper => rdd.operation})
+        result = false
+        if part_id == lost_part || is_partition_by
+            # do transformation on relevant worker(s)
+            result = master_rpc(master, rdd.partitions[part_id], "doop", {:rdd => rdd, :part_id => part_id, :oper => rdd.operation})
         else
-            # update rdd info
-            return master_rpc(master, rdd.partitions[part_id], "update_rdd", {:rdd => rdd})
+            # update rdd info on workers that don't need to do recomputation
+            result = master_rpc(master, rdd.partitions[part_id], "update_rdd", {:rdd => rdd})
+        end
+        if result == false
+            return_bool = false
         end
     end
+    return return_bool
 end
 
 # handler for update_rdd
