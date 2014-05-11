@@ -62,6 +62,7 @@ end
 
 #recovers given partition
 function recover_rdd(master::Master, rdd_id::Int64, partition_id::Int64)
+    println("recovering")
     
     #Check if rdd comes directly from disk. If so, recover partition and return
     if length(master.rdds[rdd_id].dependencies) == 0
