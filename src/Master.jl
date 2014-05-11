@@ -95,6 +95,7 @@ function recover(master::Master, rdd_id::Int64)
     for worker in master.rdds[rdd_id].partitions
         if !worker[2].active
             append!(lost_partitions, worker[1])
+        end
     end
 
     for partition_id in lost_partitions
