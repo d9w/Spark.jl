@@ -23,12 +23,13 @@ function master_rpc(master::Master, worker::WorkerRef, func::ASCIIString, args::
     m = {:call => func, :args => args}
     encoded = json(m)
     try
+        @assert worker.active
         println(socket, encoded)
         result = JSON.parse(readline(socket))
         return result["result"]
     catch e
         worker.active = false
-        master.sockets[worker] = None
+#        master.sockets[worker] = None
         return false
     end
 end
@@ -81,10 +82,10 @@ function identify(worker::Worker, args::Dict)
     return true
 end
 
-# returns a random active worker
+# returns an active worker
 function find_active_worker(master::Master)
-    active_workers = shuffle(master.workers)
-    for worker in active_workers
+    #active_workers = shuffle(master.workers)
+    for worker in master.workers
         if worker.active == true
             return worker
         end
@@ -101,17 +102,16 @@ function recover_part(master::Master, rdd::RDD, lost_part::Int64)
     is_partition_by = false
     # partition_by is the only wide dependency, do it on all workers
     if rdd.operation.name == "partition_by"
-        rdd.operation.args["dest_partition"] = lost_part
+        rdd.operation.arguments["dest_partition"] = lost_part
         is_partition_by = true
     end
     for part_id in keys(partitions)
         result = false
-        if part_id == lost_part || is_partition_by
+        # update rdd info on workers that don't need to do recomputation
+        result = master_rpc(master, rdd.partitions[part_id], "update_rdd", {:rdd => rdd})
+        if (is_partition_by && part_id != lost_part) || (!is_partition_by && part_id == lost_part)
             # do transformation on relevant worker(s)
             result = master_rpc(master, rdd.partitions[part_id], "doop", {:rdd => rdd, :part_id => part_id, :oper => rdd.operation})
-        else
-            # update rdd info on workers that don't need to do recomputation
-            result = master_rpc(master, rdd.partitions[part_id], "update_rdd", {:rdd => rdd})
         end
         if result == false
             return_bool = false
@@ -145,7 +145,8 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
         end
     end
     if part_length_same
-        partitions = create(part, master, part_length)
+        # just inherit parent partitions
+        partitions = rdds[1].partitions
     else
         partitions = create(part, master)
     end
@@ -158,7 +159,7 @@ function doop(master::Master, rdds::Array, oper::Transformation, part::Partition
     return_bool = true
     for part_id in keys(partitions)
         result = master_rpc(master, partitions[part_id], "doop", {:rdd => new_RDD, :part_id => part_id, :oper => oper})
-        if result["result"] == false
+        if result == false || result["result"] == false
             return_bool = false
         end
     end

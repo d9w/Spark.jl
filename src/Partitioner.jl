@@ -15,7 +15,7 @@ end
 function create(p::NoPartitioner, master::Master, n::Int64)
     partitions = Dict{Int64, WorkerRef}()
     n_workers = length(master.workers) # topology will change if workers list changes,
-    for i in 1:n                       # no more guarantee for co-partitioning
+    for i in 0:n-1                     # no more guarantee for co-partitioning
         partitions[i] = master.workers[(i%n_workers)+1]
     end
     return partitions

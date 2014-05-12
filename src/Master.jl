@@ -90,7 +90,8 @@ function recover_partition(master::Master, rdd_id::Int64, partition_id::Int64)
 end
 
 #recovers all lost partitions of the given rdd
-function recover(master::Master, rdd_id::Int64)
+function recover(master::Master, rdd::RDD)
+    rdd_id = rdd.ID
     lost_partitions::Array{Int64} = Array(Int64, 0)
     for worker in master.rdds[rdd_id].partitions
         if !worker[2].active

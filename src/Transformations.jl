@@ -135,15 +135,14 @@ function partition_by(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::D
     partitioner = mkPartitioner(args["partitioner"])
     old_rdd_id = collect(keys(newRDD.rdd.dependencies))[1]
     local_rdd_copy = worker.rdds[old_rdd_id]
-    for pid in keys(local_rdd_copy.partitions)
-        partition = local_rdd_copy.partitions[pid]
-        for key in keys(partition.data)
-            new_partitions = assign(partitioner, newRDD.rdd, key)
-            for new_partition in new_partitions
-                if !("dest_partition" in collect(keys(args))) || new_partition == args["dest_partition"]
-                    new_worker = newRDD.rdd.partitions[new_partition]
-                    send_key(worker, new_worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
-                end
+    partition = local_rdd_copy.partitions[part_id]
+    for key in keys(partition.data)
+        new_partitions = assign(partitioner, newRDD.rdd, key)
+        for new_partition in new_partitions
+            if !("dest_partition" in collect(keys(args))) || new_partition == args["dest_partition"]
+                new_worker = newRDD.rdd.partitions[new_partition]
+                bool_val = "dest_partition" in collect(keys(args))
+                send_key(worker, new_worker, newRDD.rdd.ID, new_partition, key, partition.data[key])
             end
         end
     end
@@ -164,7 +163,6 @@ function input(worker::Worker, newRDD::WorkerRDD, part_id::Int64, args::Dict)
     stream = open(file_name)
     total_lines = countlines(stream)
     seekstart(stream)
-
 
     lines_partition = floor(total_lines / length(newRDD.rdd.partitions))
     begin_line = lines_partition * part_id
